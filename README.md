@@ -59,7 +59,7 @@ map("n", "<leader>kk", "<cmd>:lua require('pdfview.renderer').previous_page()<CR
 1. **Opening a PDF File**  
    Use the following command to open a PDF:
    ```lua
-   require('pdfview').open()
+   require("pdfview").open()
    ```
    This will open Telescope's file finder, allowing you to search for PDF files in your project or system.
 
@@ -75,11 +75,11 @@ map("n", "<leader>kk", "<cmd>:lua require('pdfview.renderer').previous_page()<CR
    Add these lines in your nvim config to open pdf's with PDFview:
    ```lua
     vim.api.nvim_create_autocmd("BufReadPost", {
-      pattern = "*.pdf",
-      callback = function()
-        local file_path = vim.api.nvim_buf_get_name(0)
-        require("pdfview").open(file_path)
-      end,
+    	pattern = "*.pdf",
+    	callback = function()
+    		local file_path = vim.api.nvim_buf_get_name(0)
+    		require("pdfview").open(file_path)
+    	end,
     })
    ```
 ---
