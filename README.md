@@ -41,7 +41,8 @@ To install `PDFview.nvim` using **LazyVim**, add the following configuration to 
 
 ```lua
 {
-  "basola21/PDFview",
+  "basola21/PDFview", -- (or use this fork: "MadKuntilanak/PDFview")
+  event = "VeryLazy",
   dependencies = { 
     "nvim-telescope/telescope.nvim" 
   },
@@ -52,8 +53,8 @@ To install `PDFview.nvim` using **LazyVim**, add the following configuration to 
       cb = nil,
     },
     keymaps = {
-      go_to_page = "<Localleader>qf",
-      show_page_in_zathura = "<Localleader>qd",
+      go_to_page = "gf",
+      show_page_in_zathura = "<Leader>x",
       next_page = "<a-n>",
       prev_page = "<a-p>",
     },
@@ -72,7 +73,7 @@ To install `PDFview.nvim` using **LazyVim**, add the following configuration to 
 
 ### Mappings
 
-The next_page and prev_page keymaps are already set up for you in the `opts.keymaps table above`.
+The `next_page` and `prev_page` keymaps are already set up for you in the `opts.keymaps` table above.
 However, if you'd rather define your own custom keys instead of using the built-in ones, you can call the underlying functions directly:
 
 ```lua

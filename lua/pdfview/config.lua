@@ -9,7 +9,7 @@ M.defaults = {
   },
   keymaps = {
     go_to_page = "gf",
-    show_page_in_zathura = "<Leader>O",
+    show_page_in_zathura = "<Leader>x",
     next_page = "<a-n>",
     prev_page = "<a-p>",
   },
