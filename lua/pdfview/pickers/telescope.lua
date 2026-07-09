@@ -12,10 +12,15 @@ local M = {}
 local pdf_previewer = previewers.new_buffer_previewer {
   define_preview = function(self, entry)
     local pdf_path = entry.path
-    local preview_text = M.preview_first_page(pdf_path)
+    local preview_text = require("pdfview").preview_first_page(pdf_path)
     vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(preview_text, "\n"))
   end,
 }
+
+---@return boolean
+function M.is_available()
+  return (pcall(require, "telescope"))
+end
 
 -- Telescope function with preview and open functionality
 ---@param path string
