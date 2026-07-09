@@ -109,7 +109,7 @@ function M.go_to(page_num, state)
   end
 
   vim.ui.input({
-    prompt = "Go to page",
+    prompt = "Go to page: ",
   }, function(input)
     if not input then
       return
@@ -160,7 +160,7 @@ function M.open(pdf_path, opts)
     opts.last_page = 1
   end
 
-  if last_open_pdf and last_open_pdf == opts.pdf_path then
+  if last_open_pdf and last_open_pdf == opts.pdf_path and vim.bo.filetype == "pdfview" then
     M.go_to(opts.last_page)
     return
   end
