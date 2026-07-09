@@ -109,7 +109,7 @@ function M.go_to(page_num, state)
   end
 
   vim.ui.input({
-    prompt = "Go to page",
+    prompt = "Go to page: ",
   }, function(input)
     if not input then
       return

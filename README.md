@@ -7,7 +7,7 @@
 
 ## Features
 
-- **Open PDF Files**: Quickly search and open PDF files using your preferred picker; `telescope.nvim`, `fzf-lua`, or the built-in default (`vim.ui.select`).
+- **Open PDF Files**: Quickly search and open PDF files using the currently supported pickers: `telescope.nvim`, `fzf-lua`, or the built-in `vim.ui.select`.
 - **Extract Text**: Extract the text from a PDF using `pdftotext` for easy reading or note-taking.
 - **Pagination**: Navigate through the document using next/previous page commands.
 - **Customizable Pagination**: Set how many lines per page should be displayed.

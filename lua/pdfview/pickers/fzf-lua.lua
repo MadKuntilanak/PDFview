@@ -99,6 +99,11 @@ function Mapping.delete_bookmark(pdf_bookmarks)
   end
 end
 
+---@return boolean
+function M.is_available()
+  return (pcall(require, "fzf-lua"))
+end
+
 ---@param path string
 ---@param cb function
 function M.files(path, cb)
@@ -113,7 +118,7 @@ function M.files(path, cb)
     no_header = true,
     no_header_i = true,
     fzf_opts = { ["--header"] = [[^x:delete  ^r:rename]] },
-    winopts = { title = Util.format_title "pdf files", preview = { hidden = true } },
+    winopts = { title = Util.format_title "pdf files", preview = { hidden = false } },
     actions = {
       ["default"] = Mapping.default(path, cb),
     },
