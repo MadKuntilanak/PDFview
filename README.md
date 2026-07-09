@@ -22,8 +22,12 @@
 ### Prerequisites
 
 - **Neovim** version 0.5 or higher
-- **Telescope.nvim**: The plugin uses Telescope to search for PDF files.
-- **pdftotext**: This plugin relies on the `pdftotext` command-line tool to extract text from PDFs. Install `pdftotext` using the following command:
+- **Picker**: **Telescope.nvim** (optional), **Fzf-lua** (optional), or the **default** picker (`vim.ui.select`)
+- **[Zathura](https://github.com/pwmt/zathura)**: document viewer
+  ```bash
+  sudo apt install zathura
+  ```
+- **pdftotext**: this plugin relies on the `pdftotext` command-line tool to extract text from PDFs. Install it using the following command:
   ```bash
   sudo apt install poppler-utils
   ```
@@ -35,14 +39,38 @@ To install `PDFview.nvim` using **LazyVim**, add the following configuration to 
 ```lua
 {
   "basola21/PDFview",
-  lazy = false,
-  dependencies = { "nvim-telescope/telescope.nvim" }
-}
+  dependencies = { 
+    "nvim-telescope/telescope.nvim" 
+  },
+  opts = {
+    path = "/path/to/pdf_folder",
+    picker = "default", -- fzf-lua, telescope, default (using vim.ui.select)
+    open = {
+      cb = nil,
+    },
+    keymaps = {
+      go_to_page = "<Localleader>qf",
+      show_page_in_zathura = "<Localleader>qd",
+      next_page = "<a-n>",
+      prev_page = "<a-p>",
+    },
+  },
+  keys = {
+    {
+      "<Leader>fp",
+      function()
+        require("pdfview").select_file_pdf()
+      end,
+      desc = "Select pdf file",
+    },
+  },
+},
 ```
 
 ### Mappings
 
-You can add the following key mappings to your Neovim configuration for easy navigation through the PDF pages:
+The next_page and prev_page keymaps are already set up for you in the `opts.keymaps table above`.
+However, if you'd rather define your own custom keys instead of using the built-in ones, you can call the underlying functions directly:
 
 ```lua
 -- Navigate to the next page in the PDF
@@ -59,14 +87,14 @@ map("n", "<leader>kk", "<cmd>:lua require('pdfview.renderer').previous_page()<CR
 1. **Opening a PDF File**  
    Use the following command to open a PDF:
    ```lua
-   require("pdfview").open()
+   require("pdfview").select_file_pdf()
    ```
    This will open Telescope's file finder, allowing you to search for PDF files in your project or system.
 
 2. **Navigating Pages**  
    Use the defined key mappings to navigate between pages:
-   - `<leader>jj` for the next page.
-   - `<leader>kk` for the previous page.
+   - `<a-n>` or `<leader>jj` for the next page.
+   - `<a-p>` or `<leader>kk` for the previous page.
 
 3. **Extracting Text from a PDF**  
    When you select a PDF using Telescope, the plugin extracts the text using `pdftotext` and displays it in a buffer, allowing for easy reading or note-taking.
@@ -75,25 +103,74 @@ map("n", "<leader>kk", "<cmd>:lua require('pdfview.renderer').previous_page()<CR
    Add these lines in your nvim config to open pdf's with PDFview:
    ```lua
     vim.api.nvim_create_autocmd("BufReadPost", {
-    	pattern = "*.pdf",
-    	callback = function()
-    		local file_path = vim.api.nvim_buf_get_name(0)
-    		require("pdfview").open(file_path)
-    	end,
+      pattern = "*.pdf",
+      callback = function()
+        local file_path = vim.api.nvim_buf_get_name(0)
+        require("pdfview").open(file_path)
+      end,
     })
    ```
 ---
 
 ## Configuration
 
-The default lines per page are set to `50`. You can change this value by modifying the `lines_per_page` variable in the `renderer.lua` file.
+### Support callback
+
+You can define a custom callback function (`open.cb`) that gets triggered whenever a PDF is opened, receiving the PDF's file path as an argument. This is useful for integrating with other plugins, for example, automatically sending the opened PDF to codecompanion.nvim for translation or summarization.
+
+Example using `codecompanion.nvim`:
+
+```lua
+  
+  ... -- default config
+  open = {
+     cb = function(pdf_path)
+       vim.api.nvim_input ":CodeCompanion /translator_role <CR>"
+     end,
+  },
+```
+
+### Support Statusline
+
+Example using `heirline.nvim`:
+
+```lua
+local get_pdfview = function()
+  if not pdfview then
+    local ok, session = pcall(require, "pdfview.renderer")
+    if ok then
+      pdfview = session
+    end
+  end
+  return pdfview
+end
+
+
+...
+
+{
+  ...
+	provider = function()
+		if vim.bo.filetype == "pdfview" then
+			if not pdfview then
+				pdfview = get_pdfview()
+			end
+
+			local pdf_render = pdfview.get()
+			if pdf_render and pdf_render.pdf_path then
+				return vim.fn.fnamemodify(pdf_render.pdf_path, ":~") .. " (Page " .. pdf_render.current_page .. ")"
+			end
+		end
+	end,
+}
+
+```
 
 ---
 
 ## Planned Features
 
 - **Improved Navigation**: Refine the pagination and scrolling behavior for a smoother reading experience.
-- **Customization**: Add options for setting default configurations like `lines_per_page` and buffer options.
 - **Document Search**: Implement a search feature to find specific text within the PDF.
 - **Improved Structure**: Enhance the project structure for better maintainability and scalability.
 

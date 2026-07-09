@@ -41,9 +41,6 @@ end
 
 ---@param page_num number|nil
 local function __open_in_zathura(page_num)
-  if Config.defaults.pdf_path then
-    state.pdf_path = Config.defaults.pdf_path
-  end
   if not page_num then
     page_num = state.current_page
   end
@@ -113,6 +110,10 @@ end
 
 -- Function to update page information
 function M.update_page_info()
+  if Config.defaults.pdf_path then
+    state.pdf_path = Config.defaults.pdf_path
+  end
+
   local buf = state.buf
   local real_page = state.current_page + (state.page_offset or 0)
   local real_total = state.total_pages + (state.page_offset or 0)
@@ -139,7 +140,9 @@ end
 
 -- Function to initialize the buffer and display the first page
 function M.display_text(text, start_page, pdf_path)
-  state.pdf_path = pdf_path
+  if Config.defaults.pdf_path then
+    state.pdf_path = pdf_path
+  end
 
   state.pages = M.paginate_text(text)
   state.total_pages = #state.pages
