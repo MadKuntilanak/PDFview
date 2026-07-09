@@ -7,11 +7,12 @@
 
 ## Features
 
-- **Open PDF Files**: Use Telescope to quickly search and open PDF files.
+- **Open PDF Files**: Quickly search and open PDF files using your preferred picker; `telescope.nvim`, `fzf-lua`, or the built-in default (`vim.ui.select`).
 - **Extract Text**: Extract the text from a PDF using `pdftotext` for easy reading or note-taking.
 - **Pagination**: Navigate through the document using next/previous page commands.
 - **Customizable Pagination**: Set how many lines per page should be displayed.
 - **Virtual Text Display**: See page numbers displayed in the buffer.
+- **Bookmarks**: Save your reading position with a bookmark and jump back to it anytime.
 
 
 <img width="800" height="495" alt="260709-14-22-34" src="https://github.com/user-attachments/assets/20ce5aa0-ffca-4972-9ca4-501736de00ac" />
@@ -41,32 +42,45 @@ To install `PDFview.nvim` using **LazyVim**, add the following configuration to 
 
 ```lua
 {
-  "basola21/PDFview", -- (or use this fork: "MadKuntilanak/PDFview")
+  "basola21/PDFview",
   event = "VeryLazy",
   dependencies = { 
     "nvim-telescope/telescope.nvim" 
   },
   opts = {
-    path = "/path/to/pdf_folder",
+    path = "/path/to/pdf_folder", -- path pdf folder
+    save = "/path/to/save_folder", -- bookmark save folder
     picker = "default", -- fzf-lua, telescope, default (using vim.ui.select)
     open = {
       cb = nil,
     },
+    window = {
+      winhighlight = nil,
+    },
     keymaps = {
+      menu = "<CR>",
       go_to_page = "gf",
       show_page_in_zathura = "<Leader>x",
       next_page = "<a-n>",
       prev_page = "<a-p>",
+      bookmark = "b",
+      save = "s",
     },
-  },
-  keys = {
-    {
-      "<Leader>fp",
-      function()
-        require("pdfview").select_file_pdf()
-      end,
-      desc = "Select pdf file",
-    },
+    keys = {
+      {
+        "<Leader>fp",
+        function()
+          require("pdfview").select_file_pdf()
+        end,
+        desc = "Select pdf file",
+      },
+      {
+        "<Leader>fP",
+        function()
+          require("pdfview").menu()
+        end,
+        desc = "Open menu",
+      },
   },
 },
 ```
@@ -77,6 +91,9 @@ The `next_page` and `prev_page` keymaps are already set up for you in the `opts.
 However, if you'd rather define your own custom keys instead of using the built-in ones, you can call the underlying functions directly:
 
 ```lua
+-- Open menu pdfview
+map("n", "<leader>ff", "<cmd>:lua require('pdfview').menu()<CR>", { desc = "PDFview: Menu" })
+
 -- Navigate to the next page in the PDF
 map("n", "<leader>jj", "<cmd>:lua require('pdfview.renderer').next_page()<CR>", { desc = "PDFview: Next page" })
 
@@ -92,6 +109,8 @@ map("n", "<leader>kk", "<cmd>:lua require('pdfview.renderer').previous_page()<CR
    Use the following command to open a PDF:
    ```lua
    require("pdfview").select_file_pdf()
+   -- or
+   require("pdfview").menu()
    ```
    This will open Telescope's file finder, allowing you to search for PDF files in your project or system.
 

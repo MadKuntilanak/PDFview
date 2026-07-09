@@ -3,15 +3,22 @@ local M = {}
 ---@type PDFviewCfg
 M.defaults = {
   path = vim.fn.stdpath "config",
+  save = vim.fn.stdpath "state",
   picker = "default",
   open = {
     cb = nil,
   },
+  window = {
+    winhighlight = nil,
+  },
   keymaps = {
+    menu = "<CR>",
     go_to_page = "gf",
     show_page_in_zathura = "<Leader>x",
     next_page = "<a-n>",
     prev_page = "<a-p>",
+    bookmark = "b",
+    save = "s",
   },
 }
 

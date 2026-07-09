@@ -2,7 +2,9 @@ local telescope = require "telescope.builtin"
 local previewers = require "telescope.previewers"
 local actions = require "telescope.actions"
 local action_state = require "telescope.actions.state"
-local util = require "pdfview.pickers.utils"
+
+local Util = require "pdfview.utils"
+local UtilPicker = require "pdfview.pickers.utils"
 
 local M = {}
 
@@ -18,10 +20,10 @@ local pdf_previewer = previewers.new_buffer_previewer {
 -- Telescope function with preview and open functionality
 ---@param path string
 ---@param cb function
-function M.telescope_open(path, cb)
+function M.files(path, cb)
   telescope.find_files {
-    prompt_title = "PDFview",
-    find_command = util.find_command(path),
+    prompt_title = Util.format_title "pdf files",
+    find_command = UtilPicker.find_command(path),
     previewer = pdf_previewer,
     attach_mappings = function(_, map)
       map("i", "<CR>", function(prompt_bufnr)
@@ -34,6 +36,12 @@ function M.telescope_open(path, cb)
       return true
     end,
   }
+end
+
+---@param path string
+---@param cb function
+function M.bookmark(path, cb)
+  Util.not_implemented_yet()
 end
 
 return M

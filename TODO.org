@@ -1,0 +1,5 @@
+* TODO
+  - [x] define bookmark save path
+  - [x] implement bookmark menu
+  - [x] implement bookmark saving
+  - [x] implement last bookmark

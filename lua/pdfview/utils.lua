@@ -106,7 +106,7 @@ function M.create_dir(path)
   end
 end
 
-function M.system_cmd(cmds)
+function M.system_command(cmds)
   vim.system(cmds, { detach = true }, function(res)
     if res.code ~= 0 then
       vim.schedule(function()
@@ -128,6 +128,110 @@ end
 function M.clear_autocmd_group(augroup_name)
   pcall(vim.api.nvim_clear_autocmds, { group = augroup_name })
   pcall(vim.api.nvim_del_augroup_by_name, augroup_name)
+end
+
+---@param title string
+---@param prefix? string
+function M.format_title(title, prefix)
+  return " " .. (prefix or "PDFview:") .. " " .. title .. " "
+end
+
+local function delete_bufnr(buf)
+  vim.api.nvim_buf_delete(buf, { force = true })
+end
+
+---@param opts {buf: integer|integer[], win:integer|integer[]}
+function M.close_win(opts)
+  if type(opts.win) == "table" then
+    for _, w in pairs(opts.win) do
+      if w and vim.api.nvim_win_is_valid(w) then
+        vim.api.nvim_win_close(w, true)
+      end
+    end
+    return
+  end
+
+  if type(opts.win) == "number" then
+    if opts.win and vim.api.nvim_win_is_valid(opts.win) then
+      vim.api.nvim_win_close(opts.win, true)
+    end
+  end
+
+  if type(opts.buf) == "table" then
+    for _, b in pairs(opts.buf) do
+      if b and vim.api.nvim_buf_is_valid(b) then
+        delete_bufnr(b)
+      end
+    end
+  end
+end
+
+---@param contents PDFviewBookmarkSaved[]
+---@param filename string
+function M.save_table_to_file(contents, filename)
+  local file = io.open(filename, "w")
+  if file then
+    file:write "return "
+    file:write(tostring(vim.inspect(contents)))
+    file:close()
+  else
+    M.warn "Failed to save data table to file"
+  end
+end
+
+---@param str string
+---@return string
+local rstrip_whitespace = function(str)
+  str = string.gsub(str, "%s+$", "")
+  return str
+end
+
+---@param str string
+---@param limit? string|nil
+---@return string
+local lstrip_whitespace = function(str, limit)
+  if limit ~= nil then
+    local num_found = 0
+    while num_found < limit do
+      str = string.gsub(str, "^%s", "")
+      num_found = num_found + 1
+    end
+  else
+    str = string.gsub(str, "^%s+", "")
+  end
+  return str
+end
+
+---@param str string
+---@return string
+function M.strip_whitespace(str)
+  if str then
+    return rstrip_whitespace(lstrip_whitespace(str))
+  end
+  return ""
+end
+
+---@return PDFviewBookmarkSaved[]|nil
+function M.get_pdf_bookmarks()
+  local Config = require "pdfview.config"
+  local file_saved = Config.defaults.save
+  if not M.is_file(file_saved) then
+    M.create_file(file_saved)
+  end
+  return dofile(file_saved) or {}
+end
+
+function M.set_extmark(bufnr, namespace_name, line, col, opts)
+  if vim.api.nvim_buf_is_valid(bufnr) then
+    local ok, id = pcall(vim.api.nvim_buf_set_extmark, bufnr, namespace_name, line, col, opts)
+
+    if not ok then
+      M.error "failed to create extmark annotation."
+      return nil
+    end
+
+    return id
+  end
 end
 
 return M

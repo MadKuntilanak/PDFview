@@ -39,11 +39,11 @@ end
 ---@param picker_name string
 ---@param path  string
 ---@param cb  function
-function M.select_file(picker_name, path, cb)
+function M.select(picker_name, method, path, cb)
   local p = get_picker(picker_name)
 
-  if p then
-    p.select_file_pdf(path, cb)
+  if p and p[method] then
+    p[method](path, cb)
   end
 end
 
