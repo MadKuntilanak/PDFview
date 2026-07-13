@@ -17,8 +17,12 @@ M.defaults = {
     show_page_in_zathura = "<Leader>x",
     next_page = "<a-n>",
     prev_page = "<a-p>",
-    bookmark = "b",
-    save = "s",
+    open_bookmark = "b",
+    save_bookmark = "s",
+    search = "<C-s>",
+    pick_search = "<Leader>s",
+    next_search_text = "<C-n>",
+    prev_search_text = "<C-p>",
   },
 }
 

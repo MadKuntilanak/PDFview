@@ -3,6 +3,8 @@ local Util = require "pdfview.utils"
 
 local parser = require "pdfview.parser"
 local renderer = require "pdfview.renderer"
+local search = require "pdfview.search"
+local picker = require "pdfview.pickers"
 
 local M = {}
 
@@ -18,17 +20,6 @@ function M.setup(opts)
 
   local keymaps = require "pdfview.keymaps"
   keymaps.setup_filetype_mappings(group, renderer.get())
-end
-
-local p
-
-local function load_picker()
-  if not p then
-    p = require "pdfview.pickers"
-    return p
-  end
-
-  return p
 end
 
 ---@param pdf_path string
@@ -47,8 +38,7 @@ function M.select_file_pdf()
     return
   end
 
-  p = load_picker()
-  p.select(Config.defaults.picker or "default", "files", path, function(pdf_path)
+  picker.select(Config.defaults.picker or "default", "files", path, function(pdf_path)
     if not Util.is_file(pdf_path) then
       Util.warn("PDF path doesn't exist: `" .. pdf_path .. "`.")
       return
@@ -60,19 +50,27 @@ function M.select_file_pdf()
   end)
 end
 
-function M.bookmark()
+function M.select_bookmark()
   local file_saved = Config.defaults.save
   if not Util.is_file(file_saved) then
     Util.warn "Bookmark save file not found. Please create one first."
     return
   end
 
-  p = load_picker()
-  p.select(Config.defaults.picker or "default", "bookmark", file_saved, function(opts)
+  picker.select(Config.defaults.picker or "default", "bookmark", file_saved, function(opts)
     Config.defaults.pdf_path = opts.pdf_path
     M.open(opts.pdf_path, opts)
     ensure_callback(opts.pdf_path)
   end)
+end
+
+function M.select_search()
+  local path = Config.defaults.path
+  if not Util.is_dir(path) then
+    return
+  end
+
+  picker.select(Config.defaults.picker or "default", "search", path, nil)
 end
 
 function M.last_bookmark()
@@ -98,13 +96,17 @@ end
 
 ---@param page_num number|nil
 ---@param state? PDFviewStateRender
-function M.go_to(page_num, state)
+---@param notify? boolean
+function M.go_to(page_num, state, notify)
   state = state or renderer.get()
+  notify = notify or false
 
   if page_num then
     state.current_page = page_num
     renderer.display_current_page()
-    Util.info(string.format("Go to page: %d", state.current_page))
+    if notify then
+      Util.info(string.format("Go to page: %d", state.current_page))
+    end
     return
   end
 
@@ -117,12 +119,15 @@ function M.go_to(page_num, state)
 
     local num = tonumber(input)
     if not num then
+      Util.warn("go_to", "not a number `" .. input .. "`")
       return
     end
 
     state.current_page = num
 
-    Util.info(string.format("Go to page: %d", state.current_page))
+    if notify then
+      Util.info(string.format("Go to page: %d", state.current_page))
+    end
     renderer.display_current_page()
   end)
 end
@@ -171,6 +176,69 @@ function M.open(pdf_path, opts)
   if text then
     renderer.display_text(text, opts.last_page)
   end
+end
+
+---@param pdf_path string
+---@param query string
+---@param state? PDFviewStateRender
+local function search_to(pdf_path, query, state)
+  state = state or renderer.get()
+
+  local matches
+  if state.search and state.search.cache and state.search.cache[query] then
+    matches = state.search.cache[query]
+  else
+    matches = search.find_matches(pdf_path, query)
+  end
+
+  if #matches == 0 then
+    Util.warn("no matches for '" .. query .. "'")
+    return
+  end
+
+  if not state.win then
+    state.win = vim.api.nvim_get_current_win()
+  end
+
+  state.search = state.search or { cache = {} }
+  state.search.cache[query] = matches
+  state.search.current_query = query
+  state.ns_search_id = vim.api.nvim_create_namespace "pdfview-search"
+
+  -- debug: test open item matches in quickfix..
+  -- local qf_items = {}
+  -- for _, m in ipairs(matches) do
+  --   table.insert(qf_items, {
+  --     filename = m.filename,
+  --     lnum = m.page,
+  --     col = m.col,
+  --     text = m.text_line,
+  --     page = m.line,
+  --   })
+  -- end
+  -- vim.fn.setqflist({}, " ", { title = "PDFview: " .. query, items = qf_items })
+  -- vim.cmd "copen"
+end
+
+---@param pdf_path? string
+---@param query? string
+function M.search_text(pdf_path, query)
+  if pdf_path and query then
+    search_to(pdf_path, query)
+  end
+
+  vim.ui.input({
+    prompt = "Search: ",
+  }, function(q)
+    if not q then
+      return
+    end
+
+    local state = renderer.get()
+    if state and state.pdf_path then
+      search_to(state.pdf_path, q)
+    end
+  end)
 end
 
 -- Function to extract and display the first page (used for preview)

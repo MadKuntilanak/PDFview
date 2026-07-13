@@ -44,7 +44,9 @@ function view.setup_ui_mappings(opts)
   local keymaps = require "pdfview.keymaps"
   local pdfview = require "pdfview"
 
+  ---@type PDFviewKeySpec[]
   local keys = {}
+
   keys = {
     -- Enter
     {
@@ -180,7 +182,7 @@ function view.menu(cfg)
 
   local lines = {
     "Select file pdf",
-    "Bookmark",
+    "Select bookmark",
     -- "History",
   }
 
@@ -191,6 +193,8 @@ function view.menu(cfg)
   if vim.bo.filetype == "pdfview" then
     lines[#lines + 1] = "Open in zathura"
     lines[#lines + 1] = "Go to"
+    lines[#lines + 1] = "Search text"
+    lines[#lines + 1] = "Select search"
 
     if cfg.picker and cfg.picker == "default" then
       lines[#lines + 1] = "Delete item bookmark"
@@ -201,9 +205,20 @@ function view.menu(cfg)
   local hval = {}
   local display_lines = {}
 
+  local seen = {}
+  local resolve_shortcut = function(item)
+    for i = 1, #item do
+      local shortcut = item:sub(i, i)
+      shortcut = shortcut:lower()
+      if not seen[shortcut] then
+        seen[shortcut] = true
+        return shortcut
+      end
+    end
+  end
+
   for i, item in ipairs(lines) do
-    local shortcut = item:sub(1, 1)
-    shortcut = shortcut:lower()
+    local shortcut = resolve_shortcut(item)
     table.insert(display_lines, string.format("    %s  %-20s %s", "●", item, shortcut))
     hval[i] = {
       idx = i,

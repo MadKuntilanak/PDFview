@@ -111,7 +111,7 @@ function M.system_command(cmds)
     if res.code ~= 0 then
       vim.schedule(function()
         ---@diagnostic disable-next-line: undefined-field
-        M.error("failed to open Zathura:" .. (res.stderr or ""))
+        M.error("utils", "failed to open Zathura:" .. (res.stderr or ""))
       end)
     end
   end)
@@ -140,28 +140,31 @@ local function delete_bufnr(buf)
   vim.api.nvim_buf_delete(buf, { force = true })
 end
 
----@param opts {buf: integer|integer[], win:integer|integer[]}
+---@param opts {buf?: integer|integer[], win?: integer|integer[]}
 function M.close_win(opts)
-  if type(opts.win) == "table" then
-    for _, w in pairs(opts.win) do
-      if w and vim.api.nvim_win_is_valid(w) then
-        vim.api.nvim_win_close(w, true)
-      end
+  opts = opts or {}
+
+  ---@param val integer|integer[]|nil
+  ---@return integer[]
+  local function to_list(val)
+    if val == nil then
+      return {}
+    elseif type(val) == "table" then
+      return val
+    else
+      return { val }
     end
-    return
   end
 
-  if type(opts.win) == "number" then
-    if opts.win and vim.api.nvim_win_is_valid(opts.win) then
-      vim.api.nvim_win_close(opts.win, true)
+  for _, w in ipairs(to_list(opts.win)) do
+    if vim.api.nvim_win_is_valid(w) then
+      vim.api.nvim_win_close(w, true)
     end
   end
 
-  if type(opts.buf) == "table" then
-    for _, b in pairs(opts.buf) do
-      if b and vim.api.nvim_buf_is_valid(b) then
-        delete_bufnr(b)
-      end
+  for _, b in ipairs(to_list(opts.buf)) do
+    if vim.api.nvim_buf_is_valid(b) then
+      delete_bufnr(b)
     end
   end
 end
@@ -175,7 +178,7 @@ function M.save_table_to_file(contents, filename)
     file:write(tostring(vim.inspect(contents)))
     file:close()
   else
-    M.warn "Failed to save data table to file"
+    M.warn("utils", "Failed to save data table to file")
   end
 end
 
@@ -221,6 +224,39 @@ function M.get_pdf_bookmarks()
   return dofile(file_saved) or {}
 end
 
+---@param item PDFviewMatch
+---@param state PDFviewStateRender
+function M.__add_buf_highlight(item, state)
+  vim.schedule(function()
+    if state.win and vim.api.nvim_win_is_valid(state.win) then
+      vim.api.nvim_set_current_win(state.win)
+
+      local bufline_count = vim.api.nvim_buf_line_count(state.buf)
+      local target_line = math.min(item.line, bufline_count)
+      local target_col = math.max((item.col or 1) - 1, 0)
+
+      vim.api.nvim_win_set_cursor(state.win, { target_line, target_col })
+
+      M.del_namespace(state.buf, state.ns_search_id)
+      local line_text = vim.api.nvim_buf_get_lines(state.buf, target_line - 1, target_line, false)[1] or ""
+      local end_col = #line_text
+
+      -- opsional: add highlight?
+      local mark_id = M.set_extmark(state.buf, state.ns_search_id, target_line - 1, target_col, {
+        end_row = target_line - 1,
+        end_col = end_col,
+        hl_group = "Search",
+      })
+
+      if mark_id then
+        vim.defer_fn(function()
+          M.del_extmark(state.buf, state.ns_search_id, mark_id)
+        end, 2000)
+      end
+    end
+  end)
+end
+
 function M.set_extmark(bufnr, namespace_name, line, col, opts)
   if vim.api.nvim_buf_is_valid(bufnr) then
     local ok, id = pcall(vim.api.nvim_buf_set_extmark, bufnr, namespace_name, line, col, opts)
@@ -231,6 +267,23 @@ function M.set_extmark(bufnr, namespace_name, line, col, opts)
     end
 
     return id
+  end
+end
+
+---@param bufnr integer
+---@param ns integer
+---@param id integer
+function M.del_extmark(bufnr, ns, id)
+  if vim.api.nvim_buf_is_valid(bufnr) then
+    return pcall(vim.api.nvim_buf_del_extmark, bufnr, ns, id)
+  end
+end
+
+---@param bufnr integer
+---@param ns integer
+function M.del_namespace(bufnr, ns)
+  if vim.api.nvim_buf_is_valid(bufnr) then
+    vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
   end
 end
 

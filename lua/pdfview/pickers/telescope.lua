@@ -49,4 +49,8 @@ function M.bookmark(path, cb)
   Util.not_implemented_yet()
 end
 
+function M.search()
+  Util.not_implemented_yet()
+end
+
 return M

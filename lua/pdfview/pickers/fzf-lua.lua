@@ -99,6 +99,25 @@ function Mapping.delete_bookmark(pdf_bookmarks)
   end
 end
 
+---@param state PDFviewStateRender
+---@param seen table<string, PDFviewMatch>
+function Mapping.search(seen, state)
+  return function(selection)
+    if not selection then
+      return
+    end
+
+    local sel = selection[1]
+    local item = seen[sel]
+    if not item then
+      return
+    end
+
+    require("pdfview").go_to(item.page, state, true)
+    Util.__add_buf_highlight(item, state)
+  end
+end
+
 ---@return boolean
 function M.is_available()
   return (pcall(require, "fzf-lua"))
@@ -152,6 +171,35 @@ function M.bookmark(path, cb)
     actions = {
       ["default"] = Mapping.default_bookmark(pdf_bookmarks, cb),
       ["ctrl-x"] = Mapping.delete_bookmark(pdf_bookmarks),
+    },
+  })
+end
+
+function M.search()
+  setup_fzflua()
+
+  local renderer = require "pdfview.renderer"
+  local state = renderer.get()
+
+  if not state.search or not state.search.cache or not state.search.current_query then
+    return
+  end
+
+  local items = state.search.cache[state.search.current_query]
+  local contents = {}
+  local seen = {}
+  for _, x in pairs(items) do
+    contents[#contents + 1] = string.format(x.text_line)
+    seen[string.format(x.text_line)] = x
+  end
+
+  FzfLua.fzf_exec(contents, {
+    no_header = true,
+    no_header_i = true,
+    fzf_opts = { ["--header"] = [[^x:delete]] },
+    winopts = { title = Util.format_title "query:" .. state.search.current_query, preview = { hidden = true } },
+    actions = {
+      ["default"] = Mapping.search(state, seen),
     },
   })
 end

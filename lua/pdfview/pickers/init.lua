@@ -4,9 +4,11 @@ local Util = require "pdfview.utils"
 
 -- NOTE: For maintainers: if you add a new picker interface, make sure to
 -- register it here as well.
-local AUTO_PICKER_PRIORITY = { "fzf-lua", "telescope" }
+local AUTO_PICKER_PRIORITY = { "fzf-lua", "snacks", "telescope", "default" }
 
 local silent_warn_notify = false
+local warn_msg_picker_not_installed
+local set_picker
 
 ---@return string
 local function default_picker()
@@ -26,7 +28,7 @@ local function default_picker()
 end
 
 ---@param picker_name string?
-local function get_picker(picker_name)
+local function resolve_picker(picker_name)
   picker_name = picker_name or ""
 
   if Util.is_blank(picker_name) then
@@ -37,32 +39,45 @@ local function get_picker(picker_name)
 
   if not ok then
     if not silent_warn_notify then
-      Util.warn(
-        string.format("The picker `%s` is not installed.\nFalling back to the default `vim.ui.select`.", picker_name)
-      )
-      silent_warn_notify = true
+      warn_msg_picker_not_installed = string.format("The picker `%s` is not installed", picker_name)
     end
 
-    return get_picker "default"
+    set_picker = default_picker()
+    return resolve_picker(set_picker)
   end
 
   if picker.is_available and not picker.is_available() then
-    return get_picker()
+    return resolve_picker()
   end
 
+  if ok and not silent_warn_notify and warn_msg_picker_not_installed then
+    Util.warn(string.format("%s.\nFalling back to the picker `%s`.", warn_msg_picker_not_installed, picker_name))
+    silent_warn_notify = true
+  end
+
+  set_picker = picker_name
   return picker
+end
+
+local p
+
+local function setup_picker(picker_name)
+  if p then
+    return p
+  end
+  p = resolve_picker(picker_name)
+  return p
 end
 
 ---@param picker_name string
 ---@param path  string
----@param cb  function
+---@param cb  function|nil
 function M.select(picker_name, method, path, cb)
-  local p = get_picker(picker_name)
-
+  p = setup_picker(picker_name)
   if p and p[method] then
     p[method](path, cb)
   else
-    Util.warn("The picker '" .. picker_name .. "' does not implement the '" .. method .. "' method.")
+    Util.warn("picker", "The picker '" .. set_picker .. "' does not implement the '" .. method .. "' method.")
   end
 end
 

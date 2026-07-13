@@ -13,6 +13,7 @@ local state = {
   page_offset = 0,
   buf = nil,
   ns_id = nil,
+  ns_search_id = nil,
   pages = {},
 }
 
@@ -119,7 +120,7 @@ function M.next_page()
     state.current_page = state.current_page + 1
     M.display_current_page()
   else
-    Util.warn "PDFview: Already at the last page."
+    Util.warn("renderer", "Already at the last page.")
   end
 end
 
@@ -129,7 +130,7 @@ function M.previous_page()
     state.current_page = state.current_page - 1
     M.display_current_page()
   else
-    Util.warn "PDFview: Already at the first page."
+    Util.warn("renderer", "Already at the firts page.")
   end
 end
 

@@ -22,7 +22,7 @@ local function run_command(cmd)
   if result and #result > 0 then
     return result
   else
-    Util.error "PDFview: Failed to extract text from PDF."
+    Util.error("parser", "Failed to extract text from PDF.")
     return nil
   end
 end
@@ -30,7 +30,7 @@ end
 -- Main function to extract text from the PDF with optional page range
 function M.extract_text(pdf_path, start_page, end_page)
   if not Util.is_file(pdf_path) then
-    Util.error("PDFview: File does not exist: " .. pdf_path)
+    Util.error("parser", "File does not exist: " .. pdf_path)
     return nil
   end
 
