@@ -66,6 +66,12 @@ local function search(state, step, bufnr)
         pcall(vim.keymap.del, "n", "<Esc>", { buffer = bufnr })
       end
     end)
+    vim.keymap.set("n", "q", function()
+      if state.win_status_search_indicator and vim.api.nvim_win_is_valid(state.win_status_search_indicator) then
+        vim.api.nvim_win_close(state.win_status_search_indicator, true)
+        pcall(vim.keymap.del, "n", "q", { buffer = bufnr })
+      end
+    end)
   end
 end
 
