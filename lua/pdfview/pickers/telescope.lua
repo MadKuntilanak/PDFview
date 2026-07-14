@@ -187,7 +187,7 @@ function M.search()
   pickers
     .new({}, {
       prompt_title = Util.format_title "<query:" .. state.search.current_query .. ">",
-      results_title = string.format("%d %s found", #data, #contents == 1 and "result" or "results"),
+      results_title = string.format("%d %s found", #contents, #contents == 1 and "result" or "results"),
       finder = finders.new_table {
         results = contents,
         entry_maker = function(entry)
