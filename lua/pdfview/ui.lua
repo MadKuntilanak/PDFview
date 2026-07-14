@@ -123,7 +123,8 @@ end
 
 ---@param buf integer
 ---@param lines string[]
-local function apply_higlights(buf, lines)
+---@param padding_line integer
+local function apply_higlights(buf, lines, padding_line)
   local ns = vim.api.nvim_create_namespace(_ui.ns)
   Util.del_namespace(buf, ns)
 
@@ -139,7 +140,7 @@ local function apply_higlights(buf, lines)
       goto continue
     end
 
-    local item_field_width = 20
+    local item_field_width = padding_line
     local item_start = bullet_end + 2
     local item_end = item_start + item_field_width
     local shortcut_start = item_end + 1
@@ -217,17 +218,32 @@ function view.menu(cfg)
     end
   end
 
+  local padding_line = 0
+  for _, str_line in pairs(lines) do
+    local str_w = vim.fn.strdisplaywidth(str_line)
+    if padding_line < str_w then
+      padding_line = str_w + 2
+    end
+  end
+
+  local padding_display_lines = 0
   for i, item in ipairs(lines) do
     local shortcut = resolve_shortcut(item)
-    table.insert(display_lines, string.format("    %s  %-20s %s", "●", item, shortcut))
+    local text_line = string.format("   %s  %-" .. padding_line .. "s %s", "●", item, shortcut)
+    table.insert(display_lines, text_line)
     hval[i] = {
       idx = i,
       item = item,
       shortcut = shortcut,
       method = item:gsub(" ", "_"):lower(),
     }
+    local len_text_line = vim.fn.strdisplaywidth(text_line)
+    if padding_display_lines < len_text_line then
+      padding_display_lines = len_text_line
+    end
   end
 
+  width = math.min(width, padding_display_lines + 2)
   height = math.min(#display_lines + 1, height)
 
   ---@type WinCfg
@@ -269,7 +285,7 @@ function view.menu(cfg)
   vim.api.nvim_set_option_value("readonly", true, { buf = main_buf })
   vim.api.nvim_set_option_value("buftype", "nofile", { buf = main_buf })
 
-  apply_higlights(main_buf, display_lines)
+  apply_higlights(main_buf, display_lines, padding_line)
 
   local opts = { buf = main_buf, win = main_win, hval = hval }
   view.setup_ui_mappings(opts)
