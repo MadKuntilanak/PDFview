@@ -48,6 +48,7 @@ function Mapping.default(path, cb)
 end
 
 ---@param pdf_bookmarks PDFviewBookmarkSaved[]
+---@param cb function
 function Mapping.default_bookmark(pdf_bookmarks, cb)
   return function(selection)
     if not selection then
@@ -82,10 +83,10 @@ function Mapping.delete_bookmark(pdf_bookmarks)
 
     for i, _pdf in pairs(pdf_bookmarks) do
       if _pdf.text_page == sel_page_num and _pdf.text_path == sel_pdf_path then
-        pdf_bookmarks[i] = nil
+        table.remove(pdf_bookmarks, i)
 
         table.sort(pdf_bookmarks, function(a, b)
-          return (a.created_at or 0) > (b.created_at or 0)
+          return (a.created_at and a.created_at or 0) > (b.created_at and b.created_at or 0)
         end)
 
         Util.save_table_to_file(pdf_bookmarks, file_saved)
@@ -140,7 +141,7 @@ function M.files(path, cb)
     cwd = path,
     no_header = true,
     no_header_i = true,
-    fzf_opts = { ["--header"] = [[^x:delete  ^r:rename]] },
+    -- fzf_opts = { ["--header"] = [[^x:delete  ^r:rename]] },
     winopts = { title = Util.format_title "pdf files", preview = { hidden = false } },
     actions = {
       ["default"] = Mapping.default(path, cb),
@@ -170,7 +171,7 @@ function M.bookmark(path, cb)
   FzfLua.fzf_exec(contents, {
     no_header = true,
     no_header_i = true,
-    fzf_opts = { ["--header"] = [[^x:delete]] },
+    fzf_opts = { ["--header"] = [[<C-x> delete]] },
     winopts = { title = Util.format_title "bookmarks", preview = { hidden = true } },
     actions = {
       ["default"] = Mapping.default_bookmark(pdf_bookmarks, cb),
@@ -185,23 +186,20 @@ function M.search()
   local renderer = require "pdfview.renderer"
   local state = renderer.get()
 
-  if not state.search or not state.search.cache or not state.search.current_query then
+  local data = UtilPicker.search_cache(state)
+  if not data then
+    Util.warn("picker.fzf-lua", "No active search")
     return
   end
 
-  local items = state.search.cache[state.search.current_query]
-  local contents = {}
-  local seen = {}
-  for _, x in pairs(items) do
-    contents[#contents + 1] = x.text_line
-    seen[x.text_line] = x
-  end
+  local contents = data.contents
+  local seen = data.seen
 
   FzfLua.fzf_exec(contents, {
     no_header = true,
     no_header_i = true,
-    fzf_opts = { ["--header"] = [[^x:delete]] },
-    winopts = { title = Util.format_title "query:" .. state.search.current_query, preview = { hidden = true } },
+    fzf_opts = { ["--header"] = [[<C-x>:delete]] },
+    winopts = { title = Util.format_title "<query:" .. state.search.current_query .. ">", preview = { hidden = true } },
     actions = {
       ["default"] = Mapping.search(state, seen),
     },

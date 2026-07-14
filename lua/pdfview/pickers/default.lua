@@ -78,7 +78,11 @@ function M.delete_item_bookmark()
 
     for i, _pdf in pairs(pdf_bookmarks) do
       if _pdf.text_page == sel_page_num and _pdf.text_path == sel_pdf_path then
-        pdf_bookmarks[i] = nil
+        table.remove(pdf_bookmarks, i)
+
+        table.sort(pdf_bookmarks, function(a, b)
+          return (a.created_at and a.created_at or 0) > (b.created_at and b.created_at or 0)
+        end)
 
         Util.save_table_to_file(pdf_bookmarks, file_saved)
         Util.info(_pdf.text_path .. " removed.")
@@ -92,32 +96,33 @@ function M.search()
   local renderer = require "pdfview.renderer"
   local state = renderer.get()
 
-  if not state.search or not state.search.cache or not state.search.current_query then
+  local data = UtilPicker.search_cache(state)
+  if not data then
+    Util.warn("picker", "No active search")
     return
   end
 
-  local items = state.search.cache[state.search.current_query]
-  local contents = {}
-  local seen = {}
-  for _, x in pairs(items) do
-    contents[#contents + 1] = x.text_line
-    seen[x.text_line] = x
-  end
+  local contents = data.contents
+  local seen = data.seen
 
-  vim.ui.select(contents, { prompt = Util.format_title "query:" .. state.search.current_query }, function(selection)
-    if not selection then
-      return
+  vim.ui.select(
+    contents,
+    { prompt = Util.format_title "<query:" .. state.search.current_query .. ">" },
+    function(selection)
+      if not selection then
+        return
+      end
+
+      local sel = selection
+      local item = seen[vim.trim(sel)]
+      if not item then
+        return
+      end
+
+      require("pdfview").go_to(item.page, state, true)
+      Util.__add_buf_highlight(item, state)
     end
-
-    local sel = selection
-    local item = seen[vim.trim(sel)]
-    if not item then
-      return
-    end
-
-    require("pdfview").go_to(item.page, state, true)
-    Util.__add_buf_highlight(item, state)
-  end)
+  )
 end
 
 return M

@@ -39,4 +39,25 @@ function M.bookmark_contents(pdf_bookmarks)
   return contents
 end
 
+---@param state PDFviewStateRender
+---@return {contents: table, seen: table<string, PDFviewMatch>}|nil
+function M.search_cache(state)
+  if not state.search or not state.search.cache or not state.search.current_query then
+    return nil
+  end
+
+  local items = state.search.cache[state.search.current_query]
+  local contents = {}
+  local seen = {}
+  for _, x in pairs(items) do
+    contents[#contents + 1] = x.text_line
+    seen[x.text_line] = x
+  end
+
+  return {
+    contents = contents,
+    seen = seen,
+  }
+end
+
 return M
