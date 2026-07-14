@@ -101,7 +101,7 @@ local function setup_pdfview_ft_mappings(ctx, state)
     once = true,
     callback = function()
       if vim.api.nvim_buf_is_valid(bufnr) then
-        pcall(vim.keymap.del, "n", "<F5>", { buffer = bufnr })
+        -- pcall(vim.keymap.del, "n", "<F5>", { buffer = bufnr })
         if state.search then
           state.search = nil
         end

@@ -125,7 +125,7 @@ end
 ---@param lines string[]
 local function apply_higlights(buf, lines)
   local ns = vim.api.nvim_create_namespace(_ui.ns)
-  vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
+  Util.del_namespace(buf, ns)
 
   for lnum, line in ipairs(lines) do
     if not line or line == "" then
@@ -264,6 +264,10 @@ function view.menu(cfg)
         .. "FloatFooter:FloatBorder,",
     { win = main_win, scope = "local" }
   )
+
+  vim.api.nvim_set_option_value("modifiable", false, { buf = main_buf })
+  vim.api.nvim_set_option_value("readonly", true, { buf = main_buf })
+  vim.api.nvim_set_option_value("buftype", "nofile", { buf = main_buf })
 
   apply_higlights(main_buf, display_lines)
 

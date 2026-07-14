@@ -74,11 +74,12 @@ end
 ---@param cb  function|nil
 function M.select(picker_name, method, path, cb)
   p = setup_picker(picker_name)
-  if p and p[method] then
-    p[method](path, cb)
-  else
+  if not p or not p[method] then
     Util.warn("picker", "The picker '" .. set_picker .. "' does not implement the '" .. method .. "' method.")
+    return
   end
+
+  p[method](path, cb)
 end
 
 return M
