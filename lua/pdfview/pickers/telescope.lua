@@ -1,4 +1,7 @@
 local telescope = require "telescope.builtin"
+local pickers = require "telescope.pickers"
+local finders = require "telescope.finders"
+local conf = require("telescope.config").values
 local previewers = require "telescope.previewers"
 local actions = require "telescope.actions"
 local action_state = require "telescope.actions.state"
@@ -16,6 +19,68 @@ local pdf_previewer = previewers.new_buffer_previewer {
     vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(preview_text, "\n"))
   end,
 }
+
+local Mapping = {}
+
+---@param pdf_bookmarks PDFviewBookmarkSaved[]
+---@param cb function
+---@param entry string
+function Mapping.default_bookmark(pdf_bookmarks, cb, entry)
+  if not entry then
+    return
+  end
+
+  local sel = vim.split(entry, "·")
+
+  local sel_page_num = Util.strip_whitespace(sel[1])
+  local sel_pdf_path = Util.strip_whitespace(sel[2])
+
+  for i, _pdf in pairs(pdf_bookmarks) do
+    if _pdf.text_page == sel_page_num and _pdf.text_path == sel_pdf_path then
+      return cb(pdf_bookmarks[i])
+    end
+  end
+end
+
+---@param pdf_bookmarks PDFviewBookmarkSaved[]
+---@param entry string
+function Mapping.delete_bookmark_entry(pdf_bookmarks, entry)
+  if not entry then
+    return
+  end
+  local sel = vim.split(entry, "·")
+
+  local sel_page_num = Util.strip_whitespace(sel[1])
+  local sel_pdf_path = Util.strip_whitespace(sel[2])
+  local file_saved = require("pdfview.config").defaults.save
+
+  for i, _pdf in pairs(pdf_bookmarks) do
+    if _pdf.text_page == sel_page_num and _pdf.text_path == sel_pdf_path then
+      table.remove(pdf_bookmarks, i)
+
+      Util.save_table_to_file(pdf_bookmarks, file_saved)
+      Util.info(_pdf.text_path .. " removed.")
+      return
+    end
+  end
+end
+
+---@param state PDFviewStateRender
+---@param seen table<string, PDFviewMatch>
+---@param entry string
+function Mapping.search(state, seen, entry)
+  if not entry then
+    return
+  end
+
+  local item = seen[vim.trim(entry)]
+  if not item then
+    return
+  end
+
+  require("pdfview").go_to(item.page, state, true)
+  Util.__add_buf_highlight(item, state)
+end
 
 ---@return boolean
 function M.is_available()
@@ -46,11 +111,107 @@ end
 ---@param path string
 ---@param cb function
 function M.bookmark(path, cb)
-  Util.not_implemented_yet()
+  local pdf_bookmarks = Util.get_pdf_bookmarks()
+  if not pdf_bookmarks then
+    return
+  end
+
+  local contents = UtilPicker.bookmark_contents(pdf_bookmarks)
+  if Util.is_blank(contents) then
+    return
+  end
+
+  pickers
+    .new({}, {
+      prompt_title = Util.format_title "bookmarks · [<C-x> delete]",
+      finder = finders.new_table {
+        results = contents,
+        entry_maker = function(entry)
+          return {
+            value = entry,
+            display = entry,
+            ordinal = entry,
+          }
+        end,
+      },
+      sorter = conf.generic_sorter {},
+      attach_mappings = function(prompt_bufnr, map)
+        actions.select_default:replace(function()
+          local entry = action_state.get_selected_entry()
+          actions.close(prompt_bufnr)
+          if entry then
+            Mapping.default_bookmark(pdf_bookmarks, cb, entry.value)
+          end
+        end)
+
+        map({ "i", "n" }, "<C-x>", function()
+          local entry = action_state.get_selected_entry()
+          if not entry then
+            return
+          end
+          Mapping.delete_bookmark_entry(pdf_bookmarks, entry.value)
+
+          -- Refresh list
+          local current_picker = action_state.get_current_picker(prompt_bufnr)
+          local new_contents = UtilPicker.bookmark_contents(pdf_bookmarks)
+          current_picker:refresh(
+            finders.new_table {
+              results = new_contents,
+              entry_maker = function(e)
+                return { value = e, display = e, ordinal = e }
+              end,
+            },
+            { reset_prompt = false }
+          )
+        end)
+
+        return true
+      end,
+    })
+    :find()
 end
 
 function M.search()
-  Util.not_implemented_yet()
+  local renderer = require "pdfview.renderer"
+  local state = renderer.get()
+
+  local data = UtilPicker.search_cache(state)
+  if not data then
+    Util.warn("picker.telescope", "No active search")
+    return
+  end
+
+  local contents = data.contents
+  local seen = data.seen
+
+  pickers
+    .new({}, {
+      prompt_title = Util.format_title "<query:" .. state.search.current_query .. ">",
+      results_title = string.format("%d %s found", #data, #contents == 1 and "result" or "results"),
+      finder = finders.new_table {
+        results = contents,
+        entry_maker = function(entry)
+          return {
+            value = entry,
+            display = entry,
+            ordinal = entry,
+          }
+        end,
+      },
+      sorter = conf.generic_sorter {},
+      attach_mappings = function(prompt_bufnr)
+        actions.select_default:replace(function()
+          local entry = action_state.get_selected_entry()
+          actions.close(prompt_bufnr)
+          if entry then
+            Mapping.search(state, seen, entry.value)
+          end
+        end)
+
+        return true
+      end,
+    })
+    :find()
 end
 
 return M
