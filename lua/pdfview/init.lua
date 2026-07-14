@@ -228,7 +228,7 @@ function M.search_text(pdf_path, query)
   end
 
   vim.ui.input({
-    prompt = "Search: ",
+    prompt = "Text Search: ",
   }, function(q)
     if not q then
       return

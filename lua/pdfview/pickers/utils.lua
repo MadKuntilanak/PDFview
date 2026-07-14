@@ -5,7 +5,7 @@ local M = {}
 ---@param pdf_bookmarks PDFviewBookmarkSaved[]
 local padding = function(pdf_bookmarks)
   local _pad = 0
-  for _, x in pairs(pdf_bookmarks) do
+  for _, x in ipairs(pdf_bookmarks) do
     if _pad < #x.text_page then
       _pad = #x.text_page
     end

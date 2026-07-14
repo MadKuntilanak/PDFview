@@ -19,6 +19,7 @@
 
 ---@class PDFviewPopup
 ---@field winhighlight string|nil
+---@field text_search_indicator {sep_front: string|nil, sep_back: string|nil, hl: string|nil, attr: string|nil, icon: string|nil}
 
 ---@class PDFviewBookmarkSaved
 ---@field last_page integer
@@ -62,4 +63,5 @@
 ---@field ns_search_id integer|nil
 ---@field page_offset integer
 ---@field win? integer
+---@field win_status_search_indicator? integer
 ---@field search? PDFviewMatchQuery

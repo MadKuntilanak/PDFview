@@ -43,7 +43,8 @@ local idx = 1
 
 ---@param state PDFviewStateRender
 ---@param step integer
-local function search(state, step)
+---@param bufnr integer
+local function search(state, step, bufnr)
   if not state.search or not state.search.cache or not state.search.current_query then
     return
   end
@@ -55,17 +56,29 @@ local function search(state, step)
   local item = items[idx]
 
   require("pdfview").go_to(item.page, state)
-  Util.__add_buf_highlight(item, state)
+  Util.__add_buf_highlight(item, state, idx, total_items)
+
+  --- Attach a keybinding to delete search indicators.
+  if state.win_status_search_indicator and vim.api.nvim_win_is_valid(state.win_status_search_indicator) then
+    vim.keymap.set("n", "<Esc>", function()
+      if state.win_status_search_indicator and vim.api.nvim_win_is_valid(state.win_status_search_indicator) then
+        vim.api.nvim_win_close(state.win_status_search_indicator, true)
+        pcall(vim.keymap.del, "n", "<Esc>", { buffer = bufnr })
+      end
+    end)
+  end
 end
 
 ---@param state PDFviewStateRender
-local function next_search_text(state)
-  search(state, 1)
+---@param bufnr integer
+local function next_search_text(state, bufnr)
+  search(state, 1, bufnr)
 end
 
 ---@param state PDFviewStateRender
-local function prev_search_text(state)
-  search(state, -1)
+---@param bufnr integer
+local function prev_search_text(state, bufnr)
+  search(state, -1, bufnr)
 end
 
 ---@param ctx vim.api.keyset.create_autocmd.callback_args
@@ -88,8 +101,8 @@ local function setup_pdfview_ft_mappings(ctx, state)
 
     { key = keymaps.search, fun = function() pdfview.search_text() end, desc = "search text", buf = bufnr },
     { key = keymaps.pick_search, fun = function() pdfview.select_search() end, desc = "select search result", buf = bufnr },
-    { key = keymaps.next_search_text, fun = function() next_search_text(state) end, desc = "next search result", buf = bufnr },
-    { key = keymaps.prev_search_text, fun = function() prev_search_text(state) end, desc = "previous search result", buf = bufnr },
+    { key = keymaps.next_search_text, fun = function() next_search_text(state, bufnr) end, desc = "next search result", buf = bufnr },
+    { key = keymaps.prev_search_text, fun = function() prev_search_text(state, bufnr) end, desc = "previous search result", buf = bufnr },
   }
 
   M.append_to(_keys)
@@ -101,7 +114,6 @@ local function setup_pdfview_ft_mappings(ctx, state)
     once = true,
     callback = function()
       if vim.api.nvim_buf_is_valid(bufnr) then
-        -- pcall(vim.keymap.del, "n", "<F5>", { buffer = bufnr })
         if state.search then
           state.search = nil
         end

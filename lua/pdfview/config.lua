@@ -10,6 +10,13 @@ M.defaults = {
   },
   window = {
     winhighlight = nil,
+    text_search_indicator = {
+      sep_front = "",
+      sep_back = "",
+      hl = "WarningMsg",
+      attr = "fg",
+      icon = " ",
+    },
   },
   keymaps = {
     menu = "<CR>",
