@@ -2,8 +2,7 @@ local M = {}
 
 local Util = require "pdfview.utils"
 
--- NOTE: For maintainers: if you add a new picker interface, make sure to
--- register it here as well.
+-- NOTE: For maintainers: if you add a new picker interface, make sure to register it here as well.
 local AUTO_PICKER_PRIORITY = { "fzf-lua", "snacks", "telescope", "default" }
 
 local silent_warn_notify = false
@@ -18,12 +17,6 @@ local function default_picker()
       return name
     end
   end
-
-  if not silent_warn_notify then
-    Util.warn "The picker is falling back to the default `vim.ui.select`."
-    silent_warn_notify = true
-  end
-
   return "default"
 end
 
@@ -51,7 +44,10 @@ local function resolve_picker(picker_name)
   end
 
   if ok and not silent_warn_notify and warn_msg_picker_not_installed then
-    Util.warn(string.format("%s.\nFalling back to the picker `%s`.", warn_msg_picker_not_installed, picker_name))
+    Util.warn(
+      "picker",
+      string.format("%s.\nFalling back to the picker `%s`.", warn_msg_picker_not_installed, picker_name)
+    )
     silent_warn_notify = true
   end
 
@@ -59,27 +55,33 @@ local function resolve_picker(picker_name)
   return picker
 end
 
-local p
+local resolved_pickers = {}
 
 local function setup_picker(picker_name)
-  if p then
-    return p
+  local cache_key = picker_name or "__auto__"
+  if resolved_pickers[cache_key] then
+    return resolved_pickers[cache_key]
   end
-  p = resolve_picker(picker_name)
-  return p
+  local picker = resolve_picker(picker_name)
+  resolved_pickers[cache_key] = picker
+  return picker
 end
 
 ---@param picker_name string
+---@param method string
 ---@param path  string
 ---@param cb  function|nil
 function M.select(picker_name, method, path, cb)
-  p = setup_picker(picker_name)
-  if not p or not p[method] then
-    Util.warn("picker", "The picker '" .. set_picker .. "' does not implement the '" .. method .. "' method.")
+  local picker = setup_picker(picker_name)
+  if not picker or not picker[method] then
+    Util.warn(
+      "picker",
+      string.format("The picker '%s' does not implement the '%s' method.", picker_name or "auto", method)
+    )
     return
   end
 
-  p[method](path, cb)
+  picker[method](path, cb)
 end
 
 return M
