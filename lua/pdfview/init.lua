@@ -64,7 +64,7 @@ function M.select_bookmark()
   end)
 end
 
-function M.select_search()
+function M.select_text_search()
   local path = Config.defaults.path
   if not Util.is_dir(path) then
     return
@@ -73,7 +73,7 @@ function M.select_search()
   picker.select(Config.defaults.picker or "default", "search", path, nil)
 end
 
-function M.last_bookmark()
+function M.open_from_last_bookmark()
   local pdf_bookmarks = Util.get_pdf_bookmarks()
   if not pdf_bookmarks then
     return
@@ -175,6 +175,8 @@ function M.open(pdf_path, opts)
   local text = parser.extract_text(opts.pdf_path)
   if text then
     renderer.display_text(text, opts.last_page)
+    local pdffile = vim.fn.fnamemodify(opts.pdf_path, ":~")
+    Util.info("Loaded PDF: `" .. pdffile .. "`")
   end
 end
 
@@ -224,7 +226,7 @@ end
 
 ---@param pdf_path? string
 ---@param query? string
-function M.search_text(pdf_path, query)
+function M.text_search(pdf_path, query)
   if pdf_path and query then
     search_to(pdf_path, query)
   end

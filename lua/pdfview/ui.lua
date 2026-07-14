@@ -167,35 +167,21 @@ end
 function view.menu(cfg)
   local win_buf = vim.api.nvim_create_buf(false, true)
 
-  local editor_size = get_editor_size()
-  local height = math.floor(editor_size.height * 20 / 100)
-  local width = math.floor(editor_size.width * 20 / 100)
-
-  ---@param height_editor integer
-  ---@param width_editor integer
-  local function get_center_col_row(height_editor, width_editor)
-    local row = math.ceil((editor_size.height - height_editor) / 2) - 5
-    local col = math.ceil((editor_size.width - width_editor) / 2)
-    return col, row
-  end
-
-  local col, row = get_center_col_row(height, width)
-
   local lines = {
     "Select file pdf",
     "Select bookmark",
-    -- "History",
   }
 
   if vim.bo.filetype ~= "pdfview" then
-    lines[#lines + 1] = "Last bookmark"
+    lines[#lines + 1] = "Open from last bookmark"
+    lines[#lines + 1] = "Open last"
   end
 
   if vim.bo.filetype == "pdfview" then
     lines[#lines + 1] = "Open in zathura"
     lines[#lines + 1] = "Go to"
-    lines[#lines + 1] = "Search text"
-    lines[#lines + 1] = "Select search"
+    lines[#lines + 1] = "Text search"
+    lines[#lines + 1] = "Select text search"
 
     if cfg.picker and cfg.picker == "default" then
       lines[#lines + 1] = "Delete item bookmark"
@@ -226,6 +212,10 @@ function view.menu(cfg)
     end
   end
 
+  table.sort(lines, function(a, b)
+    return a:lower() < b:lower()
+  end)
+
   local padding_display_lines = 0
   for i, item in ipairs(lines) do
     local shortcut = resolve_shortcut(item)
@@ -243,8 +233,20 @@ function view.menu(cfg)
     end
   end
 
-  width = math.min(width, padding_display_lines + 2)
-  height = math.min(#display_lines + 1, height)
+  local editor_size = get_editor_size()
+  local width = math.floor(editor_size.width * 20 / 100)
+  width = math.min(width, padding_display_lines + 4)
+  local height = #display_lines + 1
+
+  ---@param height_editor integer
+  ---@param width_editor integer
+  local function get_center_col_row(height_editor, width_editor)
+    local row = math.ceil((editor_size.height - height_editor) / 2) - 5
+    local col = math.ceil((editor_size.width - width_editor) / 2)
+    return col, row
+  end
+
+  local col, row = get_center_col_row(height, width)
 
   ---@type WinCfg
   local wincfg = {
