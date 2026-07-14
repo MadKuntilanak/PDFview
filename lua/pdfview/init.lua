@@ -188,7 +188,7 @@ local function search_to(pdf_path, query, state)
   if state.search and state.search.cache and state.search.cache[query] then
     matches = state.search.cache[query]
   else
-    matches = search.find_matches(pdf_path, query)
+    matches = search.find_matches(pdf_path, query, state)
   end
 
   if #matches == 0 then
@@ -204,6 +204,8 @@ local function search_to(pdf_path, query, state)
   state.search.cache[query] = matches
   state.search.current_query = query
   state.ns_search_id = vim.api.nvim_create_namespace "pdfview-search"
+
+  Util.info(string.format("Found `%d %s` for query `%s`", #matches, (#matches == 1) and "match" or "matches", query))
 
   -- debug: test open item matches in quickfix..
   -- local qf_items = {}
