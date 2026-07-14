@@ -101,14 +101,18 @@ end
 
 ---@param state PDFviewStateRender
 ---@param seen table<string, PDFviewMatch>
-function Mapping.search(seen, state)
+function Mapping.search(state, seen)
   return function(selection)
     if not selection then
       return
     end
 
     local sel = selection[1]
-    local item = seen[sel]
+    if not sel then
+      return
+    end
+
+    local item = seen[vim.trim(sel)]
     if not item then
       return
     end
@@ -189,8 +193,8 @@ function M.search()
   local contents = {}
   local seen = {}
   for _, x in pairs(items) do
-    contents[#contents + 1] = string.format(x.text_line)
-    seen[string.format(x.text_line)] = x
+    contents[#contents + 1] = x.text_line
+    seen[x.text_line] = x
   end
 
   FzfLua.fzf_exec(contents, {

@@ -100,8 +100,8 @@ function M.search()
   local contents = {}
   local seen = {}
   for _, x in pairs(items) do
-    contents[#contents + 1] = string.format(x.text_line)
-    seen[string.format(x.text_line)] = x
+    contents[#contents + 1] = x.text_line
+    seen[x.text_line] = x
   end
 
   vim.ui.select(contents, { prompt = Util.format_title "query:" .. state.search.current_query }, function(selection)
@@ -110,7 +110,7 @@ function M.search()
     end
 
     local sel = selection
-    local item = seen[sel]
+    local item = seen[vim.trim(sel)]
     if not item then
       return
     end
