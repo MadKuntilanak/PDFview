@@ -17,9 +17,19 @@
 ---@field next_search_text string
 ---@field prev_search_text string
 
----@class PDFviewPopup
+---@class PDFviewPopupTextSearchHl
+---@field hl string,
+---@field attr "fg"|"bg"
+
+---@class PDFviewPopupTextSearchIndicator
+---@field sep { back: string, front: string, fg: PDFviewPopupTextSearchHl, bg: PDFviewPopupTextSearchHl }
+---@field icon { text: string, fg: PDFviewPopupTextSearchHl, bg: PDFviewPopupTextSearchHl }
+---@field text { fg: PDFviewPopupTextSearchHl, bg: PDFviewPopupTextSearchHl, bold?: boolean }
+---@field search { fg: PDFviewPopupTextSearchHl, bg: PDFviewPopupTextSearchHl, bold?: boolean }
+
+---@class PDFviewWindow
 ---@field winhighlight string|nil
----@field text_search_indicator {sep_front: string|nil, sep_back: string|nil, hl: string|nil, attr: string|nil, icon: string|nil}
+---@field text_search_indicator PDFviewPopupTextSearchIndicator
 
 ---@class PDFviewBookmarkSaved
 ---@field last_page integer
@@ -28,15 +38,17 @@
 ---@field created_at number
 ---@field text_path string
 ---@field text_page string
+---@field pages? table
 
 ---@class PDFviewCfg
 ---@field path string
 ---@field save string
 ---@field picker string
----@field window PDFviewPopup
+---@field window PDFviewWindow
 ---@field pdf_path string|nil
 ---@field keymaps PDFviewKeymaps
 ---@field open? {cb?:function}
+---@field save_last_open? string
 ---@field ui? {cb?:function, menu?: table<integer, {idx: integer, item: string, shortcut: string, method: string}>}
 ---@field group? string
 
@@ -52,16 +64,24 @@
 ---@field current_query string
 ---@field cache table<string, PDFviewMatch[]>
 
+---@class PDFviewStateO
+---@field pages table
+---@field page_offset integer
+---@field total_pages integer
+---@field current_page integer
+
 ---@class PDFviewStateRender
 ---@field current_page integer
 ---@field total_pages integer
 ---@field pdf_path string
 ---@field filetype string
 ---@field pages table
+---@field o table<string, PDFviewStateO[]>
 ---@field buf integer|nil
 ---@field ns_id integer|nil
 ---@field ns_search_id integer|nil
 ---@field page_offset integer
----@field win? integer
 ---@field win_status_search_indicator? integer
+---@field orginal_text? string
+---@field win? integer
 ---@field search? PDFviewMatchQuery

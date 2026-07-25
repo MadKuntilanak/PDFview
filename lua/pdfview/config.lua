@@ -11,11 +11,29 @@ M.defaults = {
   window = {
     winhighlight = nil,
     text_search_indicator = {
-      sep_front = "",
-      sep_back = "",
-      hl = "WarningMsg",
-      attr = "fg",
-      icon = " ",
+      search = {
+        fg = { hl = "Normal", attr = "bg" },
+        bg = { hl = "Function", attr = "fg" },
+        bold = true,
+      },
+      icon = {
+        text = " ",
+        fg = { hl = "Normal", attr = "bg" },
+        bg = { hl = "WarningMsg", attr = "fg" },
+      },
+
+      sep = {
+        back = "",
+        front = "",
+        fg = { hl = "Normal", attr = "bg" },
+        bg = { hl = "WarningMsg", attr = "fg" },
+      },
+
+      text = {
+        fg = { hl = "Normal", attr = "bg" },
+        bg = { hl = "WarningMsg", attr = "fg" },
+        bold = true,
+      },
     },
   },
   keymaps = {

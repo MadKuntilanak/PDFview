@@ -1,4 +1,5 @@
 local Plenary_path = require "plenary.path"
+local Cfg_win_text_s = require("pdfview.config").defaults.window.text_search_indicator
 
 local M = {}
 
@@ -104,6 +105,11 @@ function M.create_dir(path)
   if not p:exists() then
     p:mkdir()
   end
+end
+
+function M.get_mtime(filepath)
+  local stat = vim.uv.fs_stat(filepath)
+  return stat and stat.mtime.sec or nil
 end
 
 function M.system_command(cmds)
@@ -228,39 +234,75 @@ function M.get_pdf_bookmarks()
   return dofile(file_saved) or {}
 end
 
+local is_hl_text_search
+
+local function setup_text_search_hl()
+  if not is_hl_text_search then
+    local sep_hl_fg = (Cfg_win_text_s and Cfg_win_text_s.sep) and Cfg_win_text_s.sep.fg.hl or "WarningMsg"
+    local sep_hl_fg_attr = (Cfg_win_text_s and Cfg_win_text_s.sep) and Cfg_win_text_s.sep.fg.attr or "fg"
+    local sep_hl_bg = (Cfg_win_text_s and Cfg_win_text_s.sep) and Cfg_win_text_s.sep.bg.hl or "Normal"
+    local sep_hl_bg_attr = (Cfg_win_text_s and Cfg_win_text_s.sep) and Cfg_win_text_s.sep.bg.attr or "bg"
+
+    local text_hl_fg = (Cfg_win_text_s and Cfg_win_text_s.text) and Cfg_win_text_s.text.fg.hl or "Normal"
+    local text_hl_fg_attr = (Cfg_win_text_s and Cfg_win_text_s.text) and Cfg_win_text_s.text.fg.attr or "bg"
+    local text_hl_bg = (Cfg_win_text_s and Cfg_win_text_s.text) and Cfg_win_text_s.text.bg.hl or "bg"
+    local text_hl_bg_attr = (Cfg_win_text_s and Cfg_win_text_s.text) and Cfg_win_text_s.text.bg.attr or "bg"
+    local text_hl_bold = (Cfg_win_text_s and Cfg_win_text_s.text) and Cfg_win_text_s.text.bold or false
+
+    local icon_hl_fg = (Cfg_win_text_s and Cfg_win_text_s.icon) and Cfg_win_text_s.icon.fg.hl or "WarningMsg"
+    local icon_hl_fg_attr = (Cfg_win_text_s and Cfg_win_text_s.icon) and Cfg_win_text_s.icon.fg.attr or "fg"
+    local icon_hl_bg = (Cfg_win_text_s and Cfg_win_text_s.icon) and Cfg_win_text_s.icon.bg.hl or "Normal"
+    local icon_hl_bg_attr = (Cfg_win_text_s and Cfg_win_text_s.icon) and Cfg_win_text_s.icon.bg.attr or "bg"
+
+    local sep_bg = get_hl(sep_hl_fg)[sep_hl_fg_attr]
+    local sep_fg = get_hl(sep_hl_bg)[sep_hl_bg_attr]
+
+    local text_bg = get_hl(text_hl_bg)[text_hl_bg_attr]
+    local text_fg = get_hl(text_hl_fg)[text_hl_fg_attr]
+
+    local icon_bg = get_hl(icon_hl_bg)[icon_hl_bg_attr]
+    local icon_fg = get_hl(icon_hl_fg)[icon_hl_fg_attr]
+
+    vim.api.nvim_set_hl(0, "PDFviewStatusSearchSep", { fg = sep_fg, bg = sep_bg })
+    vim.api.nvim_set_hl(0, "PDFviewStatusSearchIcon", { fg = icon_fg, bg = icon_bg })
+    vim.api.nvim_set_hl(0, "PDFviewStatusSearchNormal", { fg = text_fg, bg = text_bg, bold = text_hl_bold })
+
+    local search_hl_bg = (Cfg_win_text_s and Cfg_win_text_s.search) and Cfg_win_text_s.search.bg.hl or "WarningMsg"
+    local search_hl_bg_attr = (Cfg_win_text_s and Cfg_win_text_s.search) and Cfg_win_text_s.search.bg.attr or "fg"
+    local search_hl_fg = (Cfg_win_text_s and Cfg_win_text_s.search) and Cfg_win_text_s.search.fg.hl or "Normal"
+    local search_hl_fg_attr = (Cfg_win_text_s and Cfg_win_text_s.search) and Cfg_win_text_s.search.fg.attr or "bg"
+    local search_hl_bold = (Cfg_win_text_s and Cfg_win_text_s.search) and Cfg_win_text_s.search.bold or false
+
+    local search_fg = get_hl(search_hl_fg)[search_hl_fg_attr]
+    local search_bg = get_hl(search_hl_bg)[search_hl_bg_attr]
+
+    vim.api.nvim_set_hl(0, "PDFviewStatusTextSearch", { fg = search_fg, bg = search_bg, bold = search_hl_bold })
+  end
+
+  is_hl_text_search = true
+end
+
 ---@param opts {buffer_line: integer, target_line: integer, total_text_search: integer, idx_text_search: integer}
 ---@param state PDFviewStateRender
 local function __add_text_search_indicator(opts, state)
-  local cfg = require("pdfview.config").defaults
+  local sep_front = (Cfg_win_text_s and Cfg_win_text_s.sep) and Cfg_win_text_s.sep.front or ""
+  local sep_back = (Cfg_win_text_s and Cfg_win_text_s.sep) and Cfg_win_text_s.sep.back or ""
+  local icon = (Cfg_win_text_s and Cfg_win_text_s.icon) and Cfg_win_text_s.icon.text or " "
 
   -- stylua: ignore
-  local sepFront = (cfg.window.text_search_indicator and cfg.window.text_search_indicator.sep_front) and cfg.window.text_search_indicator.sep_front or ""
-  -- stylua: ignore
-  local sepBack = (cfg.window.text_search_indicator and cfg.window.text_search_indicator.sep_back) and cfg.window.text_search_indicator.sep_back or ""
-  local hl_fg_group = (cfg.window.text_search_indicator and cfg.window.text_search_indicator.hl) or "WarningMsg"
-  local hl_fg_attr = (cfg.window.text_search_indicator and cfg.window.text_search_indicator.attr) or "fg"
-  -- stylua: ignore
-  local icon = (cfg.window.text_search_indicator and cfg.window.text_search_indicator.icon) and cfg.window.text_search_indicator.icon or " "
   local text = string.format(
-    "%d/%d %s found | query: %s",
+    '%d/%d %s found | query: "%s"',
     opts.idx_text_search or 0,
     opts.total_text_search or 0,
     (opts.total_text_search == 1 or opts.total_text_search == 0) and "result" or "results",
     state.search.current_query
   )
 
-  local hl_bg = get_hl(hl_fg_group)[hl_fg_attr]
-  local hl_fg = get_hl("Normal")["bg"]
-
-  vim.api.nvim_set_hl(0, "PDFviewStatusSearchSep", { fg = hl_bg, bg = hl_fg })
-  vim.api.nvim_set_hl(0, "PDFviewStatusSearchIcon", { fg = hl_fg, bg = hl_bg })
-  vim.api.nvim_set_hl(0, "PDFviewStatusSearchNormal", { fg = hl_fg, bg = hl_bg, bold = true })
-
   local segments = {
-    { text = sepFront, hl = "PDFviewStatusSearchSep" },
+    { text = sep_back, hl = "PDFviewStatusSearchSep" },
     { text = icon, hl = "PDFviewStatusSearchIcon" },
     { text = " " .. text, hl = nil },
-    { text = sepBack, hl = "PDFviewStatusSearchSep" },
+    { text = sep_front, hl = "PDFviewStatusSearchSep" },
   }
 
   local full_line = ""
@@ -345,6 +387,8 @@ function M.__add_buf_highlight(item, state, idx_text_search, total_search_text)
       local line_text = vim.api.nvim_buf_get_lines(state.buf, target_line - 1, target_line, false)[1] or ""
       local end_col = #line_text
 
+      setup_text_search_hl()
+
       if idx_text_search and total_search_text then
         local __opts = {
           buffer_line = bufline_count,
@@ -356,10 +400,11 @@ function M.__add_buf_highlight(item, state, idx_text_search, total_search_text)
       end
 
       M.del_namespace(state.buf, state.ns_search_id)
+
       local mark_id = M.set_extmark(state.buf, state.ns_search_id, target_line - 1, target_col, {
         end_row = target_line - 1,
         end_col = end_col,
-        hl_group = "Search",
+        hl_group = "PDFviewStatusTextSearch",
       })
 
       if mark_id then
