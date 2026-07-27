@@ -87,6 +87,8 @@ local function prev_search_text(state, bufnr)
   search(state, -1, bufnr)
 end
 
+local _h_keys = {}
+
 ---@param ctx vim.api.keyset.create_autocmd.callback_args
 ---@param state PDFviewStateRender
 local function setup_pdfview_ft_mappings(ctx, state)
@@ -105,13 +107,21 @@ local function setup_pdfview_ft_mappings(ctx, state)
     { key = keymaps.save_bookmark, fun = function() save(state) end, desc = "save bookmark", buf = bufnr },
     { key = keymaps.menu, fun = function() pdfview.menu() end, desc = "open menu", buf = bufnr },
 
-    { key = keymaps.search, fun = function() pdfview.search_text() end, desc = "search text", buf = bufnr },
-    { key = keymaps.pick_search, fun = function() pdfview.select_search() end, desc = "select search result", buf = bufnr },
+    { key = keymaps.search, fun = function() pdfview.text_search() end, desc = "search text", buf = bufnr },
+    { key = keymaps.pick_search, fun = function() pdfview.select_text_search() end, desc = "select search result", buf = bufnr },
     { key = keymaps.next_search_text, fun = function() next_search_text(state, bufnr) end, desc = "next search result", buf = bufnr },
     { key = keymaps.prev_search_text, fun = function() prev_search_text(state, bufnr) end, desc = "previous search result", buf = bufnr },
+
+    { key = keymaps.show_helps, fun = function() require("pdfview.ui").call("show_keymap_helps", Config.defaults) end, desc = "show helps", buf = bufnr },
   }
 
   M.append_to(_keys)
+
+  if not Config.defaults.show_helps then
+    Config.defaults.show_helps = {}
+  end
+
+  Config.defaults.show_helps = _h_keys
 
   local augroup = Util.create_augroup_name("SearchCleanup_" .. state.buf)
   vim.api.nvim_create_autocmd({ "BufWipeout", "BufUnload" }, {
@@ -148,6 +158,7 @@ end
 function M.append_to(tbl_keys)
   for _, k in pairs(tbl_keys) do
     local keys = type(k.key) == "string" and { k.key } or k.key
+    table.insert(_h_keys, { key = k.key, desc = k.desc, type = k.type and k.type or "global" })
     for _, key in ipairs(keys) do
       if type(k.fun) == "function" then
         vim.keymap.set("n", key, k.fun, {

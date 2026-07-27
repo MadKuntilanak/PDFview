@@ -3,6 +3,7 @@
 ---@field fun string|function
 ---@field desc string
 ---@field buf? integer
+---@field type? "menu"|"global"
 
 ---@class PDFviewKeymaps
 ---@field go_to_page string
@@ -16,6 +17,7 @@
 ---@field pick_search string
 ---@field next_search_text string
 ---@field prev_search_text string
+---@field show_helps string
 
 ---@class PDFviewPopupTextSearchHl
 ---@field hl string,
@@ -51,6 +53,7 @@
 ---@field save_last_open? string
 ---@field ui? {cb?:function, menu?: table<integer, {idx: integer, item: string, shortcut: string, method: string}>}
 ---@field group? string
+---@field show_helps? {key: string|table, desc: string, type?: "menu"|"global"}[]
 
 ---@class PDFviewMatch
 ---@field page integer
