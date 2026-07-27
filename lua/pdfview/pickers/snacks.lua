@@ -20,9 +20,9 @@ local M = {}
 
 local Mapping = {}
 
----@param pdf_bookmarks PDFviewBookmarkSaved[]
+---@param pdf_bookmark PDFviewBookmarkSaved
 ---@param cb function
-function Mapping.default_bookmark(pdf_bookmarks, cb, selection)
+function Mapping.default_bookmark(pdf_bookmark, cb, selection)
   if not selection then
     return
   end
@@ -33,36 +33,49 @@ function Mapping.default_bookmark(pdf_bookmarks, cb, selection)
   local sel_page_num = Util.strip_whitespace(sel[1])
   local sel_pdf_path = Util.strip_whitespace(sel[2])
 
-  for i, _pdf in pairs(pdf_bookmarks) do
-    if _pdf.text_page == sel_page_num and _pdf.text_path == sel_pdf_path then
-      return cb(pdf_bookmarks[i])
+  for i, bookmark_item in pairs(pdf_bookmark.items) do
+    if bookmark_item.text_page == sel_page_num and bookmark_item.text_path == sel_pdf_path then
+      local sel_pdf_bookmark = pdf_bookmark.items[i]
+      if sel_pdf_bookmark then
+        local pdf_path = sel_pdf_bookmark.pdf_path
+        local pages = pdf_bookmark.__o[pdf_path]
+        if pages then
+          sel_pdf_bookmark.pages = pages["pages"]
+        end
+        return cb(sel_pdf_bookmark)
+      end
     end
   end
 end
 
----@param pdf_bookmarks PDFviewBookmarkSaved[]
+---@param pdf_bookmark PDFviewBookmarkSaved
 ---@param selection string
-function Mapping.delete_bookmark(pdf_bookmarks, selection)
+function Mapping.delete_bookmark(pdf_bookmark, selection)
   if not selection then
     return
   end
 
   local sel = vim.split(selection, "·")
+  if not sel then
+    return
+  end
 
   local sel_page_num = Util.strip_whitespace(sel[1])
   local sel_pdf_path = Util.strip_whitespace(sel[2])
   local file_saved = require("pdfview.config").defaults.save
 
-  for i, _pdf in pairs(pdf_bookmarks) do
-    if _pdf.text_page == sel_page_num and _pdf.text_path == sel_pdf_path then
-      table.remove(pdf_bookmarks, i)
+  for i, bookmark_item in pairs(pdf_bookmark.items) do
+    if bookmark_item.text_page == sel_page_num and bookmark_item.text_path == sel_pdf_path then
+      table.remove(pdf_bookmark.items, i)
 
-      table.sort(pdf_bookmarks, function(a, b)
+      table.sort(pdf_bookmark.items, function(a, b)
         return (a.created_at and a.created_at or 0) > (b.created_at and b.created_at or 0)
       end)
 
-      Util.save_table_to_file(pdf_bookmarks, file_saved)
-      Util.info(_pdf.text_path .. " removed.")
+      Util.save_table_to_file(pdf_bookmark, file_saved)
+
+      local filename = vim.fs.basename(bookmark_item.text_path)
+      Util.info(string.format("Removed bookmark page %s in `%s`.", bookmark_item.text_page, filename))
       return
     end
   end
@@ -111,12 +124,13 @@ end
 ---@param path string
 ---@param cb function
 function M.bookmark(path, cb)
-  local pdf_bookmarks = Util.get_pdf_bookmarks()
-  if not pdf_bookmarks then
+  local pdf_bookmark = Util.get_pdf_bookmarks()
+  if not pdf_bookmark or Util.is_blank(pdf_bookmark.items) then
+    Util.warn "No saved pdf bookmarks found."
     return
   end
 
-  local contents = UtilPicker.bookmark_contents(pdf_bookmarks)
+  local contents = UtilPicker.bookmark_contents(pdf_bookmark.items)
   if Util.is_blank(contents) then
     return
   end
@@ -136,7 +150,7 @@ function M.bookmark(path, cb)
     confirm = function(picker, item)
       picker:close()
       if item then
-        Mapping.default_bookmark(pdf_bookmarks, cb, item.text)
+        Mapping.default_bookmark(pdf_bookmark, cb, item.text)
       end
     end,
     actions = {
@@ -144,7 +158,7 @@ function M.bookmark(path, cb)
         if not item then
           return
         end
-        Mapping.delete_bookmark(pdf_bookmarks, item.text)
+        Mapping.delete_bookmark(pdf_bookmark, item.text)
         picker:close()
         vim.schedule(function()
           M.bookmark(path, cb)

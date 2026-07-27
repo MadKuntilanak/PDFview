@@ -33,7 +33,7 @@
 ---@field winhighlight string|nil
 ---@field text_search_indicator PDFviewPopupTextSearchIndicator
 
----@class PDFviewBookmarkSaved
+---@class PDFviewBookmarkSavedData
 ---@field last_page integer
 ---@field real_page integer
 ---@field pdf_path string
@@ -41,6 +41,10 @@
 ---@field text_path string
 ---@field text_page string
 ---@field pages? table
+
+---@class PDFviewBookmarkSaved
+---@field __o? table<string, PDFviewStateO[]>
+---@field items PDFviewBookmarkSavedData[]
 
 ---@class PDFviewCfg
 ---@field path string
@@ -69,6 +73,7 @@
 
 ---@class PDFviewStateO
 ---@field pages table
+---@field mtime integer
 ---@field page_offset integer
 ---@field total_pages integer
 ---@field current_page integer

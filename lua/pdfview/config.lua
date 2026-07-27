@@ -3,7 +3,7 @@ local M = {}
 ---@type PDFviewCfg
 M.defaults = {
   path = vim.fn.stdpath "config",
-  save = vim.fn.stdpath "state",
+  save = vim.fn.stdpath "cache",
   picker = "default",
   open = {
     cb = nil,
@@ -48,6 +48,7 @@ M.defaults = {
     pick_search = "<Leader>s",
     next_search_text = "<C-n>",
     prev_search_text = "<C-p>",
+    show_helps = "<Leader>?",
   },
 }
 

@@ -224,7 +224,7 @@ local get_hl = function(group)
   return vim.api.nvim_get_hl(0, { name = group })
 end
 
----@return PDFviewBookmarkSaved[]|nil
+---@return PDFviewBookmarkSaved|nil
 function M.get_pdf_bookmarks()
   local Config = require "pdfview.config"
   local file_saved = Config.defaults.save
@@ -299,10 +299,10 @@ local function __add_text_search_indicator(opts, state)
   )
 
   local segments = {
-    { text = sep_back, hl = "PDFviewStatusSearchSep" },
-    { text = icon, hl = "PDFviewStatusSearchIcon" },
+    { text = sep_back,    hl = "PDFviewStatusSearchSep" },
+    { text = icon,        hl = "PDFviewStatusSearchIcon" },
     { text = " " .. text, hl = nil },
-    { text = sep_front, hl = "PDFviewStatusSearchSep" },
+    { text = sep_front,   hl = "PDFviewStatusSearchSep" },
   }
 
   local full_line = ""

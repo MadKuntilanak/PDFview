@@ -15,6 +15,7 @@ local state = {
   ns_id = nil,
   ns_search_id = nil,
   pages = {},
+  o = {},
 }
 
 -- Function to display the current page
@@ -65,6 +66,7 @@ function M.update_page_info()
 end
 
 -- Function to split text into pages
+---@return table
 function M.paginate_text(text)
   text = text:gsub("\f%s*$", "")
 
@@ -76,13 +78,49 @@ function M.paginate_text(text)
   return pages
 end
 
--- Function to initialize the buffer and display the first page
-function M.display_text(text, start_page, pdf_path)
-  if Config.defaults.pdf_path then
-    state.pdf_path = pdf_path
+---@param pdf_path? string
+---@return PDFviewStateO
+function M.update_state_o(pdf_path)
+  pdf_path = pdf_path or state.pdf_path
+  local pages = state.pages
+  local has_mtime_changed = false
+
+  local current_mtime = Util.get_mtime(pdf_path)
+
+  if state.o[pdf_path] then
+    local last_mtime = state.o[pdf_path]["mtime"]
+    if last_mtime ~= current_mtime then
+      has_mtime_changed = true
+    end
   end
 
-  state.pages = M.paginate_text(text)
+  -- check mtime here
+  if has_mtime_changed then
+    local parser = require "pdfview.parser"
+    local text = parser.extract_text(state.pdf_path)
+    pages = M.paginate_text(text)
+  end
+
+  if not state.o[pdf_path] then
+    state.o[pdf_path] = {
+      pages = pages,
+      mtime = current_mtime,
+      page_offset = state.page_offset,
+      total_pages = state.total_pages,
+      current_page = state.current_page,
+    }
+  end
+
+  return state.o[pdf_path]
+end
+
+-- Function to initialize the buffer and display the first page
+function M.display_text(text, start_page, pages, pdf_path)
+  if not pdf_path then
+    pdf_path = state.pdf_path
+  end
+
+  state.pages = pages or M.paginate_text(text)
   state.total_pages = #state.pages
 
   if start_page then
@@ -108,6 +146,7 @@ function M.display_text(text, start_page, pdf_path)
   state.ns_id = vim.api.nvim_create_namespace "PDFview"
 
   M.display_current_page()
+  M.update_state_o(state.pdf_path)
 
   if buf and vim.api.nvim_buf_is_valid(buf) then
     vim.api.nvim_set_current_buf(state.buf)

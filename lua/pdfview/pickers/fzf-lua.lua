@@ -16,7 +16,7 @@ local function setup_fzflua()
   local ok, _ = pcall(require, "fzf-lua")
   if not ok then
     if not silent_notify then
-      Util.error "This extension requires ibhagwan/fzf-lua (https://github.com/ibhagwan/fzf-lua)"
+      Util.error("fzf-lua", "This extension requires ibhagwan/fzf-lua (https://github.com/ibhagwan/fzf-lua)")
       silent_notify = true
       return
     end
@@ -40,6 +40,9 @@ function Mapping.default(path, cb)
     end
 
     local sel = selection[1]
+    if not sel then
+      return
+    end
 
     local pdf_path = path .. "/" .. sel
     pdf_path = vim.fs.normalize(pdf_path)
@@ -47,50 +50,66 @@ function Mapping.default(path, cb)
   end
 end
 
----@param pdf_bookmarks PDFviewBookmarkSaved[]
+---@param pdf_bookmark PDFviewBookmarkSaved
 ---@param cb function
-function Mapping.default_bookmark(pdf_bookmarks, cb)
+function Mapping.default_bookmark(pdf_bookmark, cb)
   return function(selection)
     if not selection then
       return
     end
 
     local sel = vim.split(selection[1], "·")
+    if not sel then
+      return
+    end
 
     local sel_page_num = Util.strip_whitespace(sel[1])
     local sel_pdf_path = Util.strip_whitespace(sel[2])
 
-    for i, _pdf in pairs(pdf_bookmarks) do
-      if _pdf.text_page == sel_page_num and _pdf.text_path == sel_pdf_path then
-        return cb(pdf_bookmarks[i])
+    for i, bookmark_item in pairs(pdf_bookmark.items) do
+      if bookmark_item.text_page == sel_page_num and bookmark_item.text_path == sel_pdf_path then
+        local sel_pdf_bookmark = pdf_bookmark.items[i]
+        if sel_pdf_bookmark then
+          local pdf_path = sel_pdf_bookmark.pdf_path
+          local pages = pdf_bookmark.__o[pdf_path]
+          if pages then
+            sel_pdf_bookmark.pages = pages["pages"]
+          end
+          return cb(sel_pdf_bookmark)
+        end
       end
     end
   end
 end
 
----@param pdf_bookmarks PDFviewBookmarkSaved[]
-function Mapping.delete_bookmark(pdf_bookmarks)
+---@param pdf_bookmark PDFviewBookmarkSaved
+function Mapping.delete_bookmark(pdf_bookmark)
   return function(selection)
     if not selection then
       return
     end
 
     local sel = vim.split(selection[1], "·")
+    if not sel then
+      return
+    end
 
     local sel_page_num = Util.strip_whitespace(sel[1])
     local sel_pdf_path = Util.strip_whitespace(sel[2])
     local file_saved = require("pdfview.config").defaults.save
 
-    for i, _pdf in pairs(pdf_bookmarks) do
-      if _pdf.text_page == sel_page_num and _pdf.text_path == sel_pdf_path then
-        table.remove(pdf_bookmarks, i)
+    for i, bookmark_item in pairs(pdf_bookmark.items) do
+      if bookmark_item.text_page == sel_page_num and bookmark_item.text_path == sel_pdf_path then
+        table.remove(pdf_bookmark.items, i)
 
-        table.sort(pdf_bookmarks, function(a, b)
+        table.sort(pdf_bookmark.items, function(a, b)
           return (a.created_at and a.created_at or 0) > (b.created_at and b.created_at or 0)
         end)
 
-        Util.save_table_to_file(pdf_bookmarks, file_saved)
-        Util.info(_pdf.text_path .. " removed.")
+        Util.save_table_to_file(pdf_bookmark, file_saved)
+
+        local filename = vim.fs.basename(bookmark_item.text_path)
+        Util.info(string.format("Removed bookmark page %s in `%s`.", bookmark_item.text_page, filename))
 
         -- unplanned: should resume or exit?
         -- FzfLua.actions.resume()
@@ -158,12 +177,13 @@ function M.bookmark(path, cb)
     return
   end
 
-  local pdf_bookmarks = Util.get_pdf_bookmarks()
-  if not pdf_bookmarks then
+  local pdf_bookmark = Util.get_pdf_bookmarks()
+  if not pdf_bookmark or Util.is_blank(pdf_bookmark.items) then
+    Util.warn "No saved pdf bookmarks found."
     return
   end
 
-  local contents = UtilPicker.bookmark_contents(pdf_bookmarks)
+  local contents = UtilPicker.bookmark_contents(pdf_bookmark.items)
   if Util.is_blank(contents) then
     return
   end
@@ -174,8 +194,8 @@ function M.bookmark(path, cb)
     fzf_opts = { ["--header"] = [[<C-x> delete]] },
     winopts = { title = Util.format_title "bookmarks", preview = { hidden = true } },
     actions = {
-      ["default"] = Mapping.default_bookmark(pdf_bookmarks, cb),
-      ["ctrl-x"] = Mapping.delete_bookmark(pdf_bookmarks),
+      ["default"] = Mapping.default_bookmark(pdf_bookmark, cb),
+      ["ctrl-x"] = Mapping.delete_bookmark(pdf_bookmark),
     },
   })
 end

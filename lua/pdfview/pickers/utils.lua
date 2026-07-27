@@ -2,7 +2,7 @@ local Util = require "pdfview.utils"
 
 local M = {}
 
----@param pdf_bookmarks PDFviewBookmarkSaved[]
+---@param pdf_bookmarks PDFviewBookmarkSavedData
 local padding = function(pdf_bookmarks)
   local _pad = 0
   for _, x in ipairs(pdf_bookmarks) do
@@ -19,21 +19,21 @@ function M.find_command(path)
   return { "find", path or ".", "-type", "f", "-name", "*.pdf" }
 end
 
----@param pdf_bookmarks PDFviewBookmarkSaved[]
+---@param pdf_bookmarks_data PDFviewBookmarkSavedData
 ---@return string[]
-function M.bookmark_contents(pdf_bookmarks)
-  if not pdf_bookmarks then
+function M.bookmark_contents(pdf_bookmarks_data)
+  if not pdf_bookmarks_data then
     return {}
   end
-  if Util.is_blank(pdf_bookmarks) then
+  if Util.is_blank(pdf_bookmarks_data) then
     Util.warn "No saved PDF bookmarks found. Please create one first."
     return {}
   end
 
-  local _pad = padding(pdf_bookmarks)
+  local _pad = padding(pdf_bookmarks_data)
 
   local contents = {}
-  for _, _pdf in pairs(pdf_bookmarks) do
+  for _, _pdf in pairs(pdf_bookmarks_data) do
     contents[#contents + 1] = string.format("%-" .. _pad .. "s · %s", _pdf.text_page, _pdf.text_path)
   end
   return contents

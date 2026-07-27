@@ -5,20 +5,23 @@ local renderer = require "pdfview.renderer"
 local M = {}
 
 ---@param state PDFviewStateRender
-local function save(state)
-  local file_saved = Config.defaults.save
+---@param is_last_open? boolean
+local function save(state, is_last_open)
+  is_last_open = is_last_open or false
+  local file_saved = is_last_open and Config.defaults.save_last_open or Config.defaults.save
+
   if not Util.is_file(file_saved) then
     Util.create_file(file_saved)
   end
 
-  local pdf_bookmarks = Util.get_pdf_bookmarks()
-  if not pdf_bookmarks then
+  local pdf_bookmark = Util.get_pdf_bookmarks()
+  if not pdf_bookmark then
     return
   end
 
   local inserted_at = os.time()
 
-  ---@type PDFviewBookmarkSaved
+  ---@type PDFviewBookmarkSavedData
   local _data = {
     last_page = state.current_page,
     real_page = state.current_page + (state.page_offset or 0),
@@ -29,13 +32,38 @@ local function save(state)
     text_path = vim.fn.fnamemodify(Config.defaults.pdf_path, ":~"),
   }
 
-  pdf_bookmarks[#pdf_bookmarks + 1] = _data
+  if is_last_open then
+    -- local pages = state.pages
+    -- if Util.is_blank(pages) then
+    --   local full_text = require("pdfview.parser").extract_text(Config.defaults.pdf_path)
+    --   pages = full_text and renderer.paginate_text(full_text) or {}
+    -- end
 
-  table.sort(pdf_bookmarks, function(a, b)
+    _data.pages = state.pages or {}
+    Util.save_table_to_file(_data, file_saved)
+    return
+  end
+
+  if not pdf_bookmark.__o then
+    pdf_bookmark.__o = {}
+  end
+
+  local tbl_o = renderer.get().o[Config.defaults.pdf_path]
+  if tbl_o and not pdf_bookmark.__o[Config.defaults.pdf_path] then
+    pdf_bookmark.__o[Config.defaults.pdf_path] = tbl_o
+  end
+
+  if not pdf_bookmark.items then
+    pdf_bookmark.items = {}
+  end
+  table.insert(pdf_bookmark.items, _data)
+  -- pdf_bookmark.items[#pdf_bookmark.items + 1] = _data
+
+  table.sort(pdf_bookmark, function(a, b)
     return (a.created_at or 0) > (b.created_at or 0)
   end)
 
-  Util.save_table_to_file(pdf_bookmarks, file_saved)
+  Util.save_table_to_file(pdf_bookmark, file_saved)
   Util.info("bookmark", string.format("Saved: %s · %s", _data.text_page, _data.text_path))
 end
 
@@ -130,12 +158,23 @@ local function setup_pdfview_ft_mappings(ctx, state)
     once = true,
     callback = function()
       if vim.api.nvim_buf_is_valid(bufnr) then
-        if state.search then
-          state.search = nil
+        if state.win_status_search_indicator and vim.api.nvim_win_is_valid(state.win_status_search_indicator) then
+          vim.api.nvim_win_close(state.win_status_search_indicator, true)
+          pcall(vim.keymap.del, "n", "<Esc>", { buffer = bufnr })
+          pcall(vim.keymap.del, "n", "q", { buffer = bufnr })
         end
-        if state.pages then
-          state.pages = nil
-        end
+
+        save(state, true)
+
+        -- FIX: temporarily commented out. If triggered between the two events above,
+        -- `pages` can become `nil`, causing `save()` to run twice and overwrite the
+        -- existing data with `nil`.
+        -- if state.search then
+        --   state.search = nil
+        -- end
+        -- if state.pages then
+        --   state.pages = nil
+        -- end
       end
     end,
   })

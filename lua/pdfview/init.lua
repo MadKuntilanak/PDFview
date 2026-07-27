@@ -13,7 +13,14 @@ function M.setup(opts)
   Config.update_settings(opts)
 
   Config.defaults.group = "PDFview"
-  Config.defaults.save = Config.defaults.save .. "/pdfview.lua"
+  local save_folder = Config.defaults.save .. "/pdfview"
+
+  if not Util.is_dir(save_folder) then
+    Util.create_dir(save_folder)
+  end
+
+  Config.defaults.save = save_folder .. "/pdfview.lua"
+  Config.defaults.save_last_open = save_folder .. "/pdfview_lastopen.lua"
 
   Util.clear_autocmd_group(Config.defaults.group)
   local group = vim.api.nvim_create_augroup(Config.defaults.group, { clear = true })
@@ -74,19 +81,49 @@ function M.select_text_search()
 end
 
 function M.open_from_last_bookmark()
-  local pdf_bookmarks = Util.get_pdf_bookmarks()
-  if not pdf_bookmarks then
+  local pdf_bookmark = Util.get_pdf_bookmarks()
+  if not pdf_bookmark or Util.is_blank(pdf_bookmark.items) then
+    Util.warn "No saved pdf bookmarks found."
     return
   end
 
-  local opts = pdf_bookmarks[1]
-  Config.defaults.pdf_path = opts.pdf_path
+  local opts = pdf_bookmark.items[1]
+  if not opts then
+    return
+  end
+
+  local pdf_path = opts.pdf_path
+  Config.defaults.pdf_path = pdf_path
+  local pages = pdf_bookmark.__o[pdf_path]
+  if pages then
+    opts.pages = pages["pages"]
+  end
+
   M.open(opts.pdf_path, opts)
   ensure_callback(opts.pdf_path)
 end
 
-function M.history()
-  Util.not_implemented_yet()
+function M.open_last()
+  local file_saved = Config.defaults.save_last_open
+  if not Util.is_file(file_saved) then
+    Util.warn "No saved last opened file was found. Please open a PDF first."
+    return
+  end
+
+  local ok, last_open = pcall(dofile, file_saved)
+
+  if not ok or type(last_open) ~= "table" or Util.is_blank(last_open.pdf_path) then
+    Util.warn "Failed to read last opened PDF data."
+    return
+  end
+
+  Config.defaults.pdf_path = last_open.pdf_path
+  M.open(last_open.pdf_path, { last_page = last_open.last_page, pages = last_open.pages })
+
+  local state = renderer.get()
+  state.pages = last_open.pages or {}
+
+  ensure_callback(last_open.pdf_path)
 end
 
 function M.menu()
@@ -119,7 +156,7 @@ function M.go_to(page_num, state, notify)
 
     local num = tonumber(input)
     if not num then
-      Util.warn("go_to", "not a number `" .. input .. "`")
+      Util.warn("go_to", "Not a number `" .. input .. "`")
       return
     end
 
@@ -153,7 +190,7 @@ local last_open_pdf
 
 -- Function to open the full PDF text (runs when PDF is selected)
 ---@param pdf_path string
----@param opts? table
+---@param opts? {pdf_path: string, last_page: integer, pages: table}
 function M.open(pdf_path, opts)
   opts = opts or {}
 
@@ -170,14 +207,33 @@ function M.open(pdf_path, opts)
     return
   end
 
+  if not opts.pages then
+    local get_o_pdf_path = renderer.get().o[pdf_path]
+    if get_o_pdf_path then
+      opts.pages = get_o_pdf_path["pages"]
+    end
+  end
+
+  local loaded = false
+
+  if opts.pages and not Util.is_blank(opts.pages) then
+    renderer.display_text(nil, opts.last_page, opts.pages)
+    loaded = true
+  else
+    local text = parser.extract_text(opts.pdf_path)
+    if text then
+      renderer.display_text(text, opts.last_page)
+      loaded = true
+    end
+  end
+
+  if not loaded then
+    return
+  end
+
   last_open_pdf = opts.pdf_path
 
-  local text = parser.extract_text(opts.pdf_path)
-  if text then
-    renderer.display_text(text, opts.last_page)
-    local pdffile = vim.fn.fnamemodify(opts.pdf_path, ":~")
-    Util.info("Loaded PDF: `" .. pdffile .. "`")
-  end
+  Util.info(("Loaded PDF: `%s`"):format(vim.fn.fnamemodify(opts.pdf_path, ":~")))
 end
 
 ---@param pdf_path string
@@ -194,7 +250,7 @@ local function search_to(pdf_path, query, state)
   end
 
   if #matches == 0 then
-    Util.warn("no matches for '" .. query .. "'")
+    Util.warn("No matches for '" .. query .. "'")
     return
   end
 

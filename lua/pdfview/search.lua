@@ -31,11 +31,13 @@ function M.find_matches(pdf_path, query, state, opts)
       local haystack = opts.case_sensitive and line or line:lower()
       local col = haystack:find(pattern, 1, true)
       if col then
+        local txt_trim = vim.trim(line)
         table.insert(matches, {
           page = page_num,
           line = line_num,
           col = col,
           text = vim.trim(line),
+          text_line = string.format("[p.%d] %s", page_num, txt_trim),
         })
       end
     end
