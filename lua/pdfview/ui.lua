@@ -295,12 +295,28 @@ function view.menu(cfg)
   local hval = {}
   local display_lines = {}
 
+  local ignore_shortcut_key = { "q" }
+
+  if type(cfg.keymaps.show_helps) == "table" then
+    ---@diagnostic disable-next-line: param-type-mismatch
+    vim.list_extend(ignore_shortcut_key, cfg.keymaps.show_helps)
+  else
+    table.insert(ignore_shortcut_key, cfg.keymaps.show_helps)
+  end
+
+  local ignore_set = {}
+  for _, ch in ipairs(ignore_shortcut_key) do
+    for i = 1, #ch do
+      local shortcut = ch:sub(i, i):lower()
+      ignore_set[shortcut] = true
+    end
+  end
+
   local seen = {}
-  local resolve_shortcut = function(item)
+  local function resolve_shortcut(item)
     for i = 1, #item do
-      local shortcut = item:sub(i, i)
-      shortcut = shortcut:lower()
-      if not seen[shortcut] then
+      local shortcut = item:sub(i, i):lower()
+      if not ignore_set[shortcut] and not seen[shortcut] then
         seen[shortcut] = true
         return shortcut
       end
@@ -318,6 +334,8 @@ function view.menu(cfg)
   table.sort(lines, function(a, b)
     return a:lower() < b:lower()
   end)
+
+  padding_line = padding_line + 5
 
   local padding_display_lines = 0
   for i, item in ipairs(lines) do

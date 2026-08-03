@@ -48,7 +48,7 @@ M.defaults = {
     pick_search = "<Leader>s",
     next_search_text = "<C-n>",
     prev_search_text = "<C-p>",
-    show_helps = "<Leader>?",
+    show_helps = "g?",
   },
 }
 
