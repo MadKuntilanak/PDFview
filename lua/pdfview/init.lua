@@ -261,6 +261,7 @@ local function search_to(pdf_path, query, state)
   state.search = state.search or { cache = {} }
   state.search.cache[query] = matches
   state.search.current_query = query
+  state.search.current_idx = 0
   state.ns_search_id = vim.api.nvim_create_namespace "pdfview-search"
 
   Util.info(string.format("Found `%d %s` for query `%s`", #matches, (#matches == 1) and "match" or "matches", query))

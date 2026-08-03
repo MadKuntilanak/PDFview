@@ -98,8 +98,12 @@ function Mapping.search(state, seen, entry)
     return
   end
 
+  state.search.current_idx = item.search_idx
+  local items = state.search.cache[state.search.current_query]
+  local total_items = #items
+
   require("pdfview").go_to(item.page, state, true)
-  Util.__add_buf_highlight(item, state)
+  Util.__add_buf_highlight(item, state, state.search.current_idx, total_items)
 end
 
 ---@return boolean

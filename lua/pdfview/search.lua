@@ -26,6 +26,7 @@ function M.find_matches(pdf_path, query, state, opts)
   local matches = {}
   local pattern = opts.case_sensitive and query or query:lower()
 
+  local idx = 1
   for page_num, lines in ipairs(pages) do
     for line_num, line in ipairs(lines) do
       local haystack = opts.case_sensitive and line or line:lower()
@@ -33,12 +34,15 @@ function M.find_matches(pdf_path, query, state, opts)
       if col then
         local txt_trim = vim.trim(line)
         table.insert(matches, {
+          search_idx = idx,
           page = page_num,
           line = line_num,
           col = col,
           text = vim.trim(line),
           text_line = string.format("[p.%d] %s", page_num, txt_trim),
         })
+
+        idx = idx + 1
       end
     end
   end

@@ -67,8 +67,6 @@ local function save(state, is_last_open)
   Util.info("bookmark", string.format("Saved: %s · %s", _data.text_page, _data.text_path))
 end
 
-local idx = 1
-
 ---@param state PDFviewStateRender
 ---@param step integer
 ---@param bufnr integer
@@ -78,10 +76,13 @@ local function search(state, step, bufnr)
   end
 
   local items = state.search.cache[state.search.current_query]
+  local idx = state.search.current_idx or 0
 
   local total_items = #items
   idx = ((idx - 1 + step) % total_items) + 1
   local item = items[idx]
+
+  state.search.current_idx = idx
 
   require("pdfview").go_to(item.page, state)
   Util.__add_buf_highlight(item, state, idx, total_items)

@@ -60,6 +60,7 @@
 ---@field show_helps? {key: string|table, desc: string, type?: "menu"|"global"}[]
 
 ---@class PDFviewMatch
+---@field search_idx integer
 ---@field page integer
 ---@field line integer
 ---@field col integer
@@ -69,6 +70,7 @@
 
 ---@class PDFviewMatchQuery
 ---@field current_query string
+---@field current_idx integer
 ---@field cache table<string, PDFviewMatch[]>
 
 ---@class PDFviewStateO

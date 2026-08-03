@@ -137,8 +137,12 @@ function Mapping.search(state, seen)
       return
     end
 
+    state.search.current_idx = item.search_idx
+    local items = state.search.cache[state.search.current_query]
+    local total_items = #items
+
     require("pdfview").go_to(item.page, state, true)
-    Util.__add_buf_highlight(item, state)
+    Util.__add_buf_highlight(item, state, state.search.current_idx, total_items)
   end
 end
 
@@ -218,7 +222,7 @@ function M.search()
   FzfLua.fzf_exec(contents, {
     no_header = true,
     no_header_i = true,
-    fzf_opts = { ["--header"] = [[<C-x>:delete]] },
+    -- fzf_opts = { ["--header"] = [[<C-x>:delete]] },
     winopts = { title = Util.format_title "<query:" .. state.search.current_query .. ">", preview = { hidden = true } },
     actions = {
       ["default"] = Mapping.search(state, seen),
