@@ -3,3 +3,9 @@
   - [x] implement bookmark menu
   - [x] implement bookmark saving
   - [x] implement last bookmark
+
+  - [X] implement text search
+  - [ ] implement snacks picker
+  - [ ] implement toggle case_sensitive
+  - [ ] implement popup search status
+  - [ ] update readme

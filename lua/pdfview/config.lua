@@ -3,13 +3,39 @@ local M = {}
 ---@type PDFviewCfg
 M.defaults = {
   path = vim.fn.stdpath "config",
-  save = vim.fn.stdpath "state",
+  save = vim.fn.stdpath "cache",
   picker = "default",
+  max_jumplist_page = 20,
   open = {
     cb = nil,
   },
   window = {
     winhighlight = nil,
+    text_search_indicator = {
+      search = {
+        fg = { hl = "Normal", attr = "bg" },
+        bg = { hl = "Function", attr = "fg" },
+        bold = true,
+      },
+      icon = {
+        text = " ",
+        fg = { hl = "Normal", attr = "bg" },
+        bg = { hl = "WarningMsg", attr = "fg" },
+      },
+
+      sep = {
+        back = "",
+        front = "",
+        fg = { hl = "Normal", attr = "bg" },
+        bg = { hl = "WarningMsg", attr = "fg" },
+      },
+
+      text = {
+        fg = { hl = "Normal", attr = "bg" },
+        bg = { hl = "WarningMsg", attr = "fg" },
+        bold = true,
+      },
+    },
   },
   keymaps = {
     menu = "<CR>",
@@ -17,8 +43,15 @@ M.defaults = {
     show_page_in_zathura = "<Leader>x",
     next_page = "<a-n>",
     prev_page = "<a-p>",
-    bookmark = "b",
-    save = "s",
+    open_bookmark = "b",
+    save_bookmark = "s",
+    search = "<C-s>",
+    pick_search = "<Leader>s",
+    next_search_text = "<C-n>",
+    prev_search_text = "<C-p>",
+    next_jumplist = "<C-i>",
+    prev_jumplist = "<C-o>",
+    show_helps = "g?",
   },
 }
 

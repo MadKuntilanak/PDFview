@@ -16,7 +16,7 @@ local function setup_fzflua()
   local ok, _ = pcall(require, "fzf-lua")
   if not ok then
     if not silent_notify then
-      Util.error "This extension requires ibhagwan/fzf-lua (https://github.com/ibhagwan/fzf-lua)"
+      Util.error("fzf-lua", "This extension requires ibhagwan/fzf-lua (https://github.com/ibhagwan/fzf-lua)")
       silent_notify = true
       return
     end
@@ -40,6 +40,9 @@ function Mapping.default(path, cb)
     end
 
     local sel = selection[1]
+    if not sel then
+      return
+    end
 
     local pdf_path = path .. "/" .. sel
     pdf_path = vim.fs.normalize(pdf_path)
@@ -47,55 +50,117 @@ function Mapping.default(path, cb)
   end
 end
 
----@param pdf_bookmarks PDFviewBookmarkSaved[]
-function Mapping.default_bookmark(pdf_bookmarks, cb)
+---@param pdf_bookmark PDFviewBookmarkSaved
+---@param cb function
+function Mapping.default_bookmark(pdf_bookmark, cb)
   return function(selection)
     if not selection then
       return
     end
 
     local sel = vim.split(selection[1], "·")
+    if not sel then
+      return
+    end
 
     local sel_page_num = Util.strip_whitespace(sel[1])
     local sel_pdf_path = Util.strip_whitespace(sel[2])
 
-    for i, _pdf in pairs(pdf_bookmarks) do
-      if _pdf.text_page == sel_page_num and _pdf.text_path == sel_pdf_path then
-        return cb(pdf_bookmarks[i])
+    for i, bookmark_item in pairs(pdf_bookmark.items) do
+      if bookmark_item.text_page == sel_page_num and bookmark_item.text_path == sel_pdf_path then
+        local sel_pdf_bookmark = pdf_bookmark.items[i]
+        if sel_pdf_bookmark then
+          local pdf_path = sel_pdf_bookmark.pdf_path
+          local pages = pdf_bookmark.__o[pdf_path]
+          if pages then
+            sel_pdf_bookmark.pages = pages["pages"]
+          end
+          return cb(sel_pdf_bookmark)
+        end
       end
     end
   end
 end
 
----@param pdf_bookmarks PDFviewBookmarkSaved[]
-function Mapping.delete_bookmark(pdf_bookmarks)
+---@param data PDFviewJumpL
+---@param cb function
+function Mapping.default_jumplist(data, cb)
+  return function(selection)
+    if not selection then
+      return
+    end
+
+    local sel = selection[1]
+
+    for _, _h in pairs(data.hval) do
+      if _h.text_line == sel then
+        return cb(_h)
+      end
+    end
+  end
+end
+
+---@param pdf_bookmark PDFviewBookmarkSaved
+function Mapping.delete_bookmark(pdf_bookmark)
   return function(selection)
     if not selection then
       return
     end
 
     local sel = vim.split(selection[1], "·")
+    if not sel then
+      return
+    end
 
     local sel_page_num = Util.strip_whitespace(sel[1])
     local sel_pdf_path = Util.strip_whitespace(sel[2])
     local file_saved = require("pdfview.config").defaults.save
 
-    for i, _pdf in pairs(pdf_bookmarks) do
-      if _pdf.text_page == sel_page_num and _pdf.text_path == sel_pdf_path then
-        pdf_bookmarks[i] = nil
+    for i, bookmark_item in pairs(pdf_bookmark.items) do
+      if bookmark_item.text_page == sel_page_num and bookmark_item.text_path == sel_pdf_path then
+        table.remove(pdf_bookmark.items, i)
 
-        table.sort(pdf_bookmarks, function(a, b)
-          return (a.created_at or 0) > (b.created_at or 0)
+        table.sort(pdf_bookmark.items, function(a, b)
+          return (a.created_at and a.created_at or 0) > (b.created_at and b.created_at or 0)
         end)
 
-        Util.save_table_to_file(pdf_bookmarks, file_saved)
-        Util.info(_pdf.text_path .. " removed.")
+        Util.save_table_to_file(pdf_bookmark, file_saved)
+
+        local filename = vim.fs.basename(bookmark_item.text_path)
+        Util.info(string.format("Removed bookmark page %s in `%s`.", bookmark_item.text_page, filename))
 
         -- unplanned: should resume or exit?
         -- FzfLua.actions.resume()
         return
       end
     end
+  end
+end
+
+---@param state PDFviewStateRender
+---@param seen table<string, PDFviewMatch>
+function Mapping.search(state, seen)
+  return function(selection)
+    if not selection then
+      return
+    end
+
+    local sel = selection[1]
+    if not sel then
+      return
+    end
+
+    local item = seen[vim.trim(sel)]
+    if not item then
+      return
+    end
+
+    state.search.current_idx = item.search_idx
+    local items = state.search.cache[state.search.current_query]
+    local total_items = #items
+
+    require("pdfview").go_to(item.page, state, true)
+    Util.__add_buf_highlight(item, state, state.search.current_idx, total_items)
   end
 end
 
@@ -117,7 +182,7 @@ function M.files(path, cb)
     cwd = path,
     no_header = true,
     no_header_i = true,
-    fzf_opts = { ["--header"] = [[^x:delete  ^r:rename]] },
+    -- fzf_opts = { ["--header"] = [[^x:delete  ^r:rename]] },
     winopts = { title = Util.format_title "pdf files", preview = { hidden = false } },
     actions = {
       ["default"] = Mapping.default(path, cb),
@@ -125,21 +190,44 @@ function M.files(path, cb)
   }
 end
 
----@param path string
+function M.jumplist(_, cb)
+  setup_fzflua()
+
+  local renderer = require "pdfview.renderer"
+  local state = renderer.get()
+
+  local data = UtilPicker.get_jumplist(state)
+  if not data or Util.is_blank(data.contents) then
+    return
+  end
+
+  FzfLua.fzf_exec(data.contents, {
+    no_header = true,
+    no_header_i = true,
+    -- fzf_opts = { ["--header"] = [[<C-x> delete]] },
+    winopts = { title = Util.format_title "jumplist", preview = { hidden = true } },
+    actions = {
+      ["default"] = Mapping.default_jumplist(data, cb),
+      -- ["ctrl-x"] = Mapping.delete_jumplist(hist),
+    },
+  })
+end
+
 ---@param cb function
-function M.bookmark(path, cb)
+function M.bookmark(_, cb)
   setup_fzflua()
 
   if not loaded then
     return
   end
 
-  local pdf_bookmarks = Util.get_pdf_bookmarks()
-  if not pdf_bookmarks then
+  local pdf_bookmark = Util.get_pdf_bookmarks()
+  if not pdf_bookmark or Util.is_blank(pdf_bookmark.items) then
+    Util.warn "No saved pdf bookmarks found."
     return
   end
 
-  local contents = UtilPicker.bookmark_contents(pdf_bookmarks)
+  local contents = UtilPicker.bookmark_contents(pdf_bookmark.items)
   if Util.is_blank(contents) then
     return
   end
@@ -147,11 +235,37 @@ function M.bookmark(path, cb)
   FzfLua.fzf_exec(contents, {
     no_header = true,
     no_header_i = true,
-    fzf_opts = { ["--header"] = [[^x:delete]] },
+    fzf_opts = { ["--header"] = [[<C-x> delete]] },
     winopts = { title = Util.format_title "bookmarks", preview = { hidden = true } },
     actions = {
-      ["default"] = Mapping.default_bookmark(pdf_bookmarks, cb),
-      ["ctrl-x"] = Mapping.delete_bookmark(pdf_bookmarks),
+      ["default"] = Mapping.default_bookmark(pdf_bookmark, cb),
+      ["ctrl-x"] = Mapping.delete_bookmark(pdf_bookmark),
+    },
+  })
+end
+
+function M.search()
+  setup_fzflua()
+
+  local renderer = require "pdfview.renderer"
+  local state = renderer.get()
+
+  local data = UtilPicker.search_cache(state)
+  if not data then
+    Util.warn("picker.fzf-lua", "No active search")
+    return
+  end
+
+  local contents = data.contents
+  local seen = data.seen
+
+  FzfLua.fzf_exec(contents, {
+    no_header = true,
+    no_header_i = true,
+    -- fzf_opts = { ["--header"] = [[<C-x>:delete]] },
+    winopts = { title = Util.format_title "<query:" .. state.search.current_query .. ">", preview = { hidden = true } },
+    actions = {
+      ["default"] = Mapping.search(state, seen),
     },
   })
 end
