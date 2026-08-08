@@ -14,10 +14,7 @@
 - **Virtual Text Display**: See page numbers displayed in the buffer.
 - **Bookmarks**: Save your reading position with a bookmark and jump back to it anytime.
 
-
 <img width="800" height="495" alt="260709-14-22-34" src="https://github.com/user-attachments/assets/20ce5aa0-ffca-4972-9ca4-501736de00ac" />
-
-
 
 ---
 
@@ -28,10 +25,13 @@
 - **Neovim** version 0.5 or higher
 - **Picker**: **Telescope.nvim** (optional), **Fzf-lua** (optional), or the **default** picker (`vim.ui.select`)
 - **[Zathura](https://github.com/pwmt/zathura)**: document viewer
+
   ```bash
   sudo apt install zathura
   ```
+
 - **pdftotext**: this plugin relies on the `pdftotext` command-line tool to extract text from PDFs. Install it using the following command:
+
   ```bash
   sudo apt install poppler-utils
   ```
@@ -51,11 +51,37 @@ To install `PDFview.nvim` using **LazyVim**, add the following configuration to 
     path = "/path/to/pdf_folder", -- path pdf folder
     save = "/path/to/save_folder", -- bookmark save folder
     picker = "default", -- fzf-lua, telescope, default (using vim.ui.select)
+    max_jumplist_page = 20,
     open = {
       cb = nil,
     },
     window = {
       winhighlight = nil,
+      text_search_indicator = {
+        search = {
+          fg = { hl = "Normal", attr = "bg" },
+          bg = { hl = "Function", attr = "fg" },
+          bold = true,
+        },
+        icon = {
+          text = " ",
+          fg = { hl = "Normal", attr = "bg" },
+          bg = { hl = "WarningMsg", attr = "fg" },
+        },
+     
+        sep = {
+          back = "",
+          front = "",
+          fg = { hl = "Normal", attr = "bg" },
+          bg = { hl = "WarningMsg", attr = "fg" },
+        },
+     
+        text = {
+          fg = { hl = "Normal", attr = "bg" },
+          bg = { hl = "WarningMsg", attr = "fg" },
+          bold = true,
+        },
+      },
     },
     keymaps = {
       menu = "<CR>",
@@ -63,8 +89,15 @@ To install `PDFview.nvim` using **LazyVim**, add the following configuration to 
       show_page_in_zathura = "<Leader>x",
       next_page = "<a-n>",
       prev_page = "<a-p>",
-      bookmark = "b",
-      save = "s",
+      open_bookmark = "b",
+      save_bookmark = "s",
+      search = "<C-s>",
+      pick_search = "<Leader>s",
+      next_search_text = "<C-n>",
+      prev_search_text = "<C-p>",
+      next_jumplist = "<C-i>",
+      prev_jumplist = "<C-o>",
+      show_helps = "g?",
     },
     keys = {
       {
@@ -107,11 +140,13 @@ map("n", "<leader>kk", "<cmd>:lua require('pdfview.renderer').previous_page()<CR
 
 1. **Opening a PDF File**  
    Use the following command to open a PDF:
+
    ```lua
    require("pdfview").select_file_pdf()
    -- or
    require("pdfview").menu()
    ```
+
    This will open Telescope's file finder, allowing you to search for PDF files in your project or system.
 
 2. **Navigating Pages**  
@@ -124,6 +159,7 @@ map("n", "<leader>kk", "<cmd>:lua require('pdfview.renderer').previous_page()<CR
 
 4. **Adding Autocmd**  
    Add these lines in your nvim config to open pdf's with PDFview:
+
    ```lua
     vim.api.nvim_create_autocmd("BufReadPost", {
       pattern = "*.pdf",
@@ -133,6 +169,7 @@ map("n", "<leader>kk", "<cmd>:lua require('pdfview.renderer').previous_page()<CR
       end,
     })
    ```
+
 ---
 
 ## Configuration
@@ -173,18 +210,18 @@ end
 
 {
   ...
-	provider = function()
-		if vim.bo.filetype == "pdfview" then
-			if not pdfview then
-				pdfview = get_pdfview()
-			end
+ provider = function()
+  if vim.bo.filetype == "pdfview" then
+   if not pdfview then
+    pdfview = get_pdfview()
+   end
 
-			local pdf_render = pdfview.get()
-			if pdf_render and pdf_render.pdf_path then
-				return vim.fn.fnamemodify(pdf_render.pdf_path, ":~") .. " (Page " .. pdf_render.current_page .. ")"
-			end
-		end
-	end,
+   local pdf_render = pdfview.get()
+   if pdf_render and pdf_render.pdf_path then
+    return vim.fn.fnamemodify(pdf_render.pdf_path, ":~") .. " (Page " .. pdf_render.current_page .. ")"
+   end
+  end
+ end,
 }
 
 ```
