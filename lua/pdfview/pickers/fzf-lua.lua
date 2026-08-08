@@ -82,6 +82,24 @@ function Mapping.default_bookmark(pdf_bookmark, cb)
   end
 end
 
+---@param data PDFviewJumpL
+---@param cb function
+function Mapping.default_jumplist(data, cb)
+  return function(selection)
+    if not selection then
+      return
+    end
+
+    local sel = selection[1]
+
+    for _, _h in pairs(data.hval) do
+      if _h.text_line == sel then
+        return cb(_h)
+      end
+    end
+  end
+end
+
 ---@param pdf_bookmark PDFviewBookmarkSaved
 function Mapping.delete_bookmark(pdf_bookmark)
   return function(selection)
@@ -172,9 +190,31 @@ function M.files(path, cb)
   }
 end
 
----@param path string
+function M.jumplist(_, cb)
+  setup_fzflua()
+
+  local renderer = require "pdfview.renderer"
+  local state = renderer.get()
+
+  local data = UtilPicker.get_jumplist(state)
+  if not data or Util.is_blank(data.contents) then
+    return
+  end
+
+  FzfLua.fzf_exec(data.contents, {
+    no_header = true,
+    no_header_i = true,
+    -- fzf_opts = { ["--header"] = [[<C-x> delete]] },
+    winopts = { title = Util.format_title "jumplist", preview = { hidden = true } },
+    actions = {
+      ["default"] = Mapping.default_jumplist(data, cb),
+      -- ["ctrl-x"] = Mapping.delete_jumplist(hist),
+    },
+  })
+end
+
 ---@param cb function
-function M.bookmark(path, cb)
+function M.bookmark(_, cb)
   setup_fzflua()
 
   if not loaded then

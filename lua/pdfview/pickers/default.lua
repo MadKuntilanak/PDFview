@@ -23,9 +23,33 @@ function M.files(path, cb)
   end)
 end
 
----@param path string
 ---@param cb function
-function M.bookmark(path, cb)
+function M.jumplist(_, cb)
+  local renderer = require "pdfview.renderer"
+  local state = renderer.get()
+
+  local data = UtilPicker.get_jumplist(state)
+  if not data or Util.is_blank(data.contents) then
+    return
+  end
+
+  vim.ui.select(data.contents, {
+    prompt = Util.format_title "jumplist",
+  }, function(choice, idx)
+    if not choice or not idx then
+      return
+    end
+
+    for _, _h in pairs(data.hval) do
+      if _h.text_line == choice then
+        return cb(_h)
+      end
+    end
+  end)
+end
+
+---@param cb function
+function M.bookmark(_, cb)
   local pdf_bookmark = Util.get_pdf_bookmarks()
   if not pdf_bookmark or Util.is_blank(pdf_bookmark.items) then
     Util.warn "No saved pdf bookmarks found."

@@ -299,10 +299,10 @@ local function __add_text_search_indicator(opts, state)
   )
 
   local segments = {
-    { text = sep_back,    hl = "PDFviewStatusSearchSep" },
-    { text = icon,        hl = "PDFviewStatusSearchIcon" },
+    { text = sep_back, hl = "PDFviewStatusSearchSep" },
+    { text = icon, hl = "PDFviewStatusSearchIcon" },
     { text = " " .. text, hl = nil },
-    { text = sep_front,   hl = "PDFviewStatusSearchSep" },
+    { text = sep_front, hl = "PDFviewStatusSearchSep" },
   }
 
   local full_line = ""

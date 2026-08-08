@@ -20,8 +20,26 @@ local M = {}
 
 local Mapping = {}
 
+---@param data PDFviewJumpL
+---@param cb function
+---@param selection string
+function Mapping.default_jumplist(data, cb, selection)
+  if not selection then
+    return
+  end
+
+  local sel = selection
+
+  for _, _h in pairs(data.hval) do
+    if _h.text_line == sel then
+      return cb(_h)
+    end
+  end
+end
+
 ---@param pdf_bookmark PDFviewBookmarkSaved
 ---@param cb function
+---@param selection string
 function Mapping.default_bookmark(pdf_bookmark, cb, selection)
   if not selection then
     return
@@ -120,6 +138,37 @@ function M.files(path, cb)
       picker:close()
       if item then
         cb(path .. "/" .. item.file)
+      end
+    end,
+  }
+end
+
+---@param cb function
+function M.jumplist(_, cb)
+  local renderer = require "pdfview.renderer"
+  local state = renderer.get()
+
+  local data = UtilPicker.get_jumplist(state)
+  if not data or Util.is_blank(data.contents) then
+    return
+  end
+
+  local items = {}
+  for i, line in ipairs(data.contents) do
+    table.insert(items, { idx = i, text = line })
+  end
+
+  snacks.picker.pick {
+    title = Util.format_title "jumplist",
+    items = items,
+    layout = { preset = "select" },
+    format = function(item)
+      return { { item.text } }
+    end,
+    confirm = function(picker, item)
+      picker:close()
+      if item then
+        Mapping.default_jumplist(data, cb, item.text)
       end
     end,
   }

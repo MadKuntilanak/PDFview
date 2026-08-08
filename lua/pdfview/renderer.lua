@@ -16,6 +16,7 @@ local state = {
   ns_search_id = nil,
   pages = {},
   o = {},
+  history = { list = {}, pointer = 0 },
 }
 
 -- Function to display the current page

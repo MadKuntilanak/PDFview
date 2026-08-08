@@ -5,6 +5,7 @@ M.defaults = {
   path = vim.fn.stdpath "config",
   save = vim.fn.stdpath "cache",
   picker = "default",
+  max_jumplist_page = 20,
   open = {
     cb = nil,
   },
@@ -48,6 +49,8 @@ M.defaults = {
     pick_search = "<Leader>s",
     next_search_text = "<C-n>",
     prev_search_text = "<C-p>",
+    next_jumplist = "<C-i>",
+    prev_jumplist = "<C-o>",
     show_helps = "g?",
   },
 }

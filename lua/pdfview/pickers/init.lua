@@ -69,7 +69,7 @@ end
 
 ---@param picker_name string
 ---@param method string
----@param path  string
+---@param path  string|nil
 ---@param cb  function|nil
 function M.select(picker_name, method, path, cb)
   local picker = setup_picker(picker_name)

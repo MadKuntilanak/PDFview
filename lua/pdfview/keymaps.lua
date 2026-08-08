@@ -128,7 +128,7 @@ local function setup_pdfview_ft_mappings(ctx, state)
   -- stylua: ignore
   ---@type PDFviewKeySpec[]
   local _keys = {
-    { key = keymaps.go_to_page, fun = function() pdfview.go_to(nil, state, true) end, desc = "go to page", buf = bufnr },
+    { key = keymaps.go_to_page, fun = function() pdfview.go_to(nil, state, false) end, desc = "go to page", buf = bufnr },
     { key = keymaps.show_page_in_zathura, fun = function() pdfview.open_in_zathura(nil, state) end, desc = "show page in Zathura", buf = bufnr },
     { key = keymaps.next_page, fun = renderer.next_page, desc = "next page", buf = bufnr },
     { key = keymaps.prev_page, fun = renderer.previous_page, desc = "previous page", buf = bufnr },
@@ -140,6 +140,9 @@ local function setup_pdfview_ft_mappings(ctx, state)
     { key = keymaps.pick_search, fun = function() pdfview.select_text_search() end, desc = "select search result", buf = bufnr },
     { key = keymaps.next_search_text, fun = function() next_search_text(state, bufnr) end, desc = "next search result", buf = bufnr },
     { key = keymaps.prev_search_text, fun = function() prev_search_text(state, bufnr) end, desc = "previous search result", buf = bufnr },
+
+    { key = keymaps.next_jumplist, fun = function() pdfview.jumplist(1) end, desc = "forward history page", buf = bufnr },
+    { key = keymaps.prev_jumplist, fun = function() pdfview.jumplist(-1) end, desc = "backward history page", buf = bufnr },
 
     { key = keymaps.show_helps, fun = function() require("pdfview.ui").call("show_keymap_helps", Config.defaults) end, desc = "show helps", buf = bufnr },
   }

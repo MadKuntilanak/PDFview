@@ -285,6 +285,7 @@ function view.menu(cfg)
     lines[#lines + 1] = "Go to"
     lines[#lines + 1] = "Text search"
     lines[#lines + 1] = "Select text search"
+    lines[#lines + 1] = "Select jumplist"
 
     if cfg.picker and cfg.picker == "default" then
       lines[#lines + 1] = "Delete item bookmark"

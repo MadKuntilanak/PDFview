@@ -17,6 +17,8 @@
 ---@field pick_search string
 ---@field next_search_text string
 ---@field prev_search_text string
+---@field next_jumplist string
+---@field prev_jumplist string
 ---@field show_helps string
 
 ---@class PDFviewPopupTextSearchHl
@@ -50,6 +52,7 @@
 ---@field path string
 ---@field save string
 ---@field picker string
+---@field max_jumplist_page integer
 ---@field window PDFviewWindow
 ---@field pdf_path string|nil
 ---@field keymaps PDFviewKeymaps
@@ -68,10 +71,21 @@
 ---@field text_line string
 ---@field filename string
 
----@class PDFviewMatchQuery
+---@class PDFviewJumpHist
+---@field page integer
+---@field line integer
+---@field col integer
+---@field text string
+---@field created_at integer
+
+---@class PDFviewSearch
 ---@field current_query string
 ---@field current_idx integer
----@field cache table<string, PDFviewMatch[]>
+---@field cache table<integer, PDFviewMatch[]>
+
+---@class PDFviewJumpList
+---@field pointer integer
+---@field list PDFviewJumpHist[]
 
 ---@class PDFviewStateO
 ---@field pages table
@@ -94,4 +108,5 @@
 ---@field win_status_search_indicator? integer
 ---@field orginal_text? string
 ---@field win? integer
----@field search? PDFviewMatchQuery
+---@field search? PDFviewSearch
+---@field history PDFviewJumpList

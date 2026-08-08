@@ -22,6 +22,23 @@ local pdf_previewer = previewers.new_buffer_previewer {
 
 local Mapping = {}
 
+---@param data PDFviewJumpL
+---@param cb function
+---@param entry string
+function Mapping.default_jumplist(data, cb, entry)
+  if not entry then
+    return
+  end
+
+  local sel = entry
+
+  for _, _h in pairs(data.hval) do
+    if _h.text_line == sel then
+      return cb(_h)
+    end
+  end
+end
+
 ---@param pdf_bookmark PDFviewBookmarkSaved
 ---@param cb function
 ---@param entry string
@@ -132,9 +149,46 @@ function M.files(path, cb)
   }
 end
 
----@param path string
 ---@param cb function
-function M.bookmark(path, cb)
+function M.jumplist(_, cb)
+  local renderer = require "pdfview.renderer"
+  local state = renderer.get()
+
+  local data = UtilPicker.get_jumplist(state)
+  if not data or Util.is_blank(data.contents) then
+    return
+  end
+
+  pickers
+    .new({}, {
+      prompt_title = Util.format_title "jumplist",
+      finder = finders.new_table {
+        results = data.contents,
+        entry_maker = function(entry)
+          return {
+            value = entry,
+            display = entry,
+            ordinal = entry,
+          }
+        end,
+      },
+      sorter = conf.generic_sorter {},
+      attach_mappings = function(prompt_bufnr, _)
+        actions.select_default:replace(function()
+          local entry = action_state.get_selected_entry()
+          actions.close(prompt_bufnr)
+          if entry then
+            Mapping.default_jumplist(data, cb, entry.value)
+          end
+        end)
+        return true
+      end,
+    })
+    :find()
+end
+
+---@param cb function
+function M.bookmark(_, cb)
   local pdf_bookmark = Util.get_pdf_bookmarks()
   if not pdf_bookmark or Util.is_blank(pdf_bookmark.items) then
     Util.warn "No saved pdf bookmarks found."

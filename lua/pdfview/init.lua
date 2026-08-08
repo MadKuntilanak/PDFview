@@ -131,19 +131,158 @@ function M.menu()
   ui.call("menu", Config.defaults)
 end
 
+---@param state PDFviewStateRender
+local function capture_context(state)
+  local win = state.win or vim.api.nvim_get_current_win()
+  local ok, pos = pcall(vim.api.nvim_win_get_cursor, win)
+  local line, col = 1, 0
+  if ok then
+    line, col = pos[1], pos[2]
+  end
+
+  local text = ""
+  if state.buf and vim.api.nvim_buf_is_valid(state.buf) then
+    local ok2, lines = pcall(vim.api.nvim_buf_get_lines, state.buf, line - 1, line, false)
+    if ok2 and lines[1] then
+      text = vim.trim(lines[1])
+    end
+  end
+
+  return { line = line, col = col, text = text, created_at = os.time() }
+end
+
+---@param state PDFviewStateRender
+---@param entry {page: integer, line: integer, col: integer}
+local function restore_cursor(state, entry)
+  vim.schedule(function()
+    local win = state.win or vim.api.nvim_get_current_win()
+    if not win or not vim.api.nvim_win_is_valid(win) then
+      return
+    end
+
+    local buf = vim.api.nvim_win_get_buf(win)
+    local line_count = vim.api.nvim_buf_line_count(buf)
+    local target_line = math.min(math.max(entry.line or 1, 1), line_count)
+
+    local line_text = vim.api.nvim_buf_get_lines(buf, target_line - 1, target_line, false)[1] or ""
+    local target_col = math.min(entry.col or 0, #line_text)
+
+    pcall(vim.api.nvim_win_set_cursor, win, { target_line, target_col })
+  end)
+end
+
+---@param state PDFviewStateRender
+---@param from_page integer
+---@param to_page integer
+local function record_jump(state, from_page, to_page)
+  state.history = state.history or { list = {}, pointer = 0 }
+  local hist = state.history
+
+  if hist.pointer < #hist.list then
+    for i = #hist.list, hist.pointer + 1, -1 do
+      table.remove(hist.list, i)
+    end
+  end
+
+  local from_entry = capture_context(state)
+  from_entry.page = from_page
+
+  if not hist.list[#hist.list] or hist.list[#hist.list].page ~= from_page then
+    table.insert(hist.list, from_entry)
+  end
+
+  local to_entry = { page = to_page, line = 1, col = 0, text = "", created_at = os.time() }
+  if not hist.list[#hist.list] or hist.list[#hist.list].page ~= to_page then
+    table.insert(hist.list, to_entry)
+  end
+
+  hist.pointer = #hist.list
+
+  local max_hist = Config.defaults.max_jumplist_page or 10
+  while #hist.list > max_hist do
+    table.remove(hist.list, 1)
+    hist.pointer = math.max(1, hist.pointer - 1)
+  end
+end
+
+function M.select_jumplist()
+  local state = renderer.get()
+  state.history = state.history or { list = {}, pointer = 0 }
+  local hist = state.history
+
+  if #hist.list == 0 then
+    Util.warn "no page history yet"
+    return
+  end
+
+  picker.select(Config.defaults.picker or "default", "jumplist", nil, function(opts)
+    if not opts then
+      return
+    end
+
+    hist.pointer = opts.idx
+    local entry = hist.list[hist.pointer]
+
+    M.go_to(entry.page, state, true)
+    restore_cursor(state, entry)
+  end)
+end
+
+---@param step integer
+---@param state? PDFviewStateRender
+function M.jumplist(step, state)
+  state = state or renderer.get()
+  state.history = state.history or { list = {}, pointer = 0 }
+  local hist = state.history
+
+  if #hist.list == 0 then
+    Util.warn "no page history yet"
+    return
+  end
+
+  local new_pointer = hist.pointer + step
+  if new_pointer < 1 or new_pointer > #hist.list then
+    Util.warn(step < 0 and "already at oldest position" or "already at newest position")
+    return
+  end
+
+  hist.pointer = new_pointer
+  local entry = hist.list[hist.pointer]
+
+  M.go_to(entry.page, state, true)
+  restore_cursor(state, entry)
+end
+
 ---@param page_num number|nil
 ---@param state? PDFviewStateRender
+---@param skip_record? boolean
 ---@param notify? boolean
-function M.go_to(page_num, state, notify)
+function M.go_to(page_num, state, skip_record, notify)
   state = state or renderer.get()
   notify = notify or false
+  skip_record = skip_record or false
 
-  if page_num then
-    state.current_page = page_num
+  ---@param num integer
+  local function jump_to_page(num)
+    if num < 1 or num > state.total_pages then
+      Util.warn(string.format("page %d out of range (1-%d)", num, state.total_pages))
+      return
+    end
+
+    if not skip_record then
+      record_jump(state, state.current_page, num)
+    end
+
+    state.current_page = num
     renderer.display_current_page()
+
     if notify then
       Util.info(string.format("Go to page: %d", state.current_page))
     end
+  end
+
+  if page_num then
+    jump_to_page(page_num)
     return
   end
 
@@ -160,12 +299,7 @@ function M.go_to(page_num, state, notify)
       return
     end
 
-    state.current_page = num
-
-    if notify then
-      Util.info(string.format("Go to page: %d", state.current_page))
-    end
-    renderer.display_current_page()
+    jump_to_page(num)
   end)
 end
 
